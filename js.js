@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function() {
     ];
 
     const logoImg = document.getElementById('logo-img');
-    let randomAnterior, randomActual;
+    let randomAnterior, randomActual=1;
     
 
 
@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", function() {
         randomAnterior = randomActual;
         randomActual = Math.floor(Math.random() * images.length);
     }
+
+    logoImg.src = images[randomActual];
+    logoImg.classList.add('show'); // Muestra la nueva imagen
 
     function changeLogo() {
         rand();
@@ -27,6 +30,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Cambiar el logo cada 10 segundos (10,000 ms)
-    setInterval(changeLogo, 10000);
+    setInterval(changeLogo, 5000);
 });
 
