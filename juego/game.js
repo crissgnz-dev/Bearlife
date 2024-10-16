@@ -1,13 +1,14 @@
 // Configuración del juego
 const config = {
     type: Phaser.AUTO, 
-    width: 1600,
-    height: 690,
+    width: window.innerWidth-100,
+    height: window.innerHeight-90,
+    parent: 'juego',
     physics: {
         default: 'arcade',
         arcade: {
             gravity: { y: 0 },
-            debug: true, // Cambia a 'false' en producción
+            debug: false, // Cambia a 'false' en producción
         }
     },
     scene: {
@@ -27,7 +28,7 @@ let lives = 3; // Vidas del jugador
 function preload() {
     this.load.spritesheet('player', './img/oso.png', { frameWidth: 32, frameHeight: 32 });
     this.load.image('vida', './img/corazon.png');
-    this.load.image('grass', './img/cesped3.png');
+    this.load.image('grass', './img/grass2.png');
     this.load.image('arbol', './img/arbol.png');
     this.load.image('tocon', './img/arbol_tronco.png');
 }
@@ -135,6 +136,7 @@ function createHearts(scene) {
     for (let i = 0; i < lives; i++) {
         // Crear los corazones como sprites más pequeños
         let heart = scene.add.image(player.x, player.y, 'vida').setScale(0.5);
+
         heartsGroup.add(heart);
     }
 }
@@ -144,12 +146,12 @@ function create() {
 
     // Crear jugador y corazones
     createPlayer(this);
-    createHearts(this);
+
 
     // Crear árboles
     const treePositions = generateNonOverlappingTreePositions(100); // 100 píxeles de separación mínima
     this.trees = createTrees(this, treePositions);
-    
+    createHearts(this);
     // Añadir colisiones entre jugador y árboles
     this.physics.add.collider(player, this.trees);
 
@@ -168,22 +170,22 @@ function create() {
     this.physics.world.setBounds(0, 0, fondoX, fondoY);
 }
 
+let speed=100;
 function update() {
     player.setVelocity(0);
-
     // Movimiento del jugador (Flechas y WASD)
     if (cursors.left.isDown || wasdKeys.left.isDown) {
-        player.setVelocityX(-40);
+        player.setVelocityX(-speed);
         player.flipX = false;
     } else if (cursors.right.isDown || wasdKeys.right.isDown) {
-        player.setVelocityX(40);
+        player.setVelocityX(speed);
         player.flipX = true;
     }
 
     if (cursors.up.isDown || wasdKeys.up.isDown) {
-        player.setVelocityY(-40);
+        player.setVelocityY(-speed);
     } else if (cursors.down.isDown || wasdKeys.down.isDown) {
-        player.setVelocityY(40);
+        player.setVelocityY(speed);
     }
 
     if (player.body.velocity.x !== 0 || player.body.velocity.y !== 0) {
