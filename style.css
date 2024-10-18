@@ -7,9 +7,6 @@ main{
     font-family: "Pixelify Sans", sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
-}
-
-main{
     display: flex;
     justify-content: center;
     align-items: center;
@@ -26,20 +23,11 @@ main div{
     text-align: center;
 }
 
-img{
-    height: 100%;
-    width: 100%;
-}
-
-.logo{
-    width: 50%;
-}
-
 #fondo{
     height: 100vh;
     width: 100vw;
     filter: blur(15px);
-    z-index: 0;
+    z-index: -1;
     position: absolute;
 }
 
@@ -52,7 +40,16 @@ p{
     margin-bottom: 2.5%;
 }
 
-a{
+#logo-img {
+    transition: opacity 1s ease-in-out;
+    opacity: 0;
+}
+
+#logo-img.show {
+    opacity: 1;
+}
+
+#jugar{
     color: white;
     text-decoration: none;
     background-color: black;
@@ -65,13 +62,4 @@ a{
     padding: 1.5%;
     padding-right: 4%;
     padding-left: 4%;
-}
-
-#logo-img {
-    transition: opacity 1s ease-in-out;
-    opacity: 0;
-}
-
-#logo-img.show {
-    opacity: 1;
 }

@@ -1,8 +1,8 @@
-// Configuración del juego
+// Configuración básica del juego en Phaser
 const config = {
-    type: Phaser.AUTO, 
-    width: window.innerWidth-100,
-    height: window.innerHeight-90,
+    type: Phaser.AUTO,
+    width: window.innerWidth - 100,
+    height: window.innerHeight - 90,
     parent: 'juego',
     physics: {
         default: 'arcade',
@@ -20,143 +20,194 @@ const config = {
 
 const game = new Phaser.Game(config);
 
+// Variables globales
 let player, cursors, wasdKeys, background, heartsGroup;
-let fondoX = 5000, fondoY = 5000;
-const numTrees = 150; // Número total de árboles
+let fondoX = 5000, fondoY = 5000; // Dimensiones del mapa
+const numTrees = 150; // Número total de árboles en el mapa
 let lives = 3; // Vidas del jugador
+let inventory = []; // Inventario donde se guardan los objetos recogidos
+let inventoryVisible = false; // Controla si el inventario está visible o no
+let inventoryBackground; // Fondo visual del inventario
+let inventoryItems = []; // Lista de objetos visuales en el inventario
 
+// Carga de imágenes y sprites
 function preload() {
-    this.load.spritesheet('player', './img/oso.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.image('vida', './img/corazon.png');
-    this.load.image('grass', './img/grass2.png');
-    this.load.image('arbol', './img/arbol.png');
-    this.load.image('tocon', './img/arbol_tronco.png');
+    this.load.spritesheet('player', './img/oso.png', { frameWidth: 32, frameHeight: 32 }); // Jugador
+    this.load.image('vida', './img/corazon.png'); // Imagen de corazones (vidas)
+    this.load.image('grass', './img/grass2.png'); // Fondo del mapa (césped)
+    this.load.image('arbol', './img/arbol.png'); // Árboles del mapa
+    this.load.image('tocon', './img/arbol_tronco.png'); // Tronco cuando un árbol es talado
+    this.load.image('item1', './img/madera.png'); // Objeto de inventario (item1)
 }
 
+// Función para crear el jugador
 function createPlayer(scene) {
     player = scene.physics.add.sprite(fondoX/2, fondoY/2, 'player').setScale(0.8);
     player.setCollideWorldBounds(true);
 
+    // Animación del jugador caminando
     scene.anims.create({
         key: 'bear_walk',
         frames: scene.anims.generateFrameNumbers('player', { start: 0, end: 4 }),
         frameRate: 12,
-        repeat: -1
+        repeat: -1 // Repite la animación continuamente
     });
 
-    player.anims.play('bear_walk');
+    player.anims.play('bear_walk'); // Activar animación por defecto
 }
 
-// Función para crear árboles y manejar su interacción
+// Función para crear los árboles interactivos
 function createTrees(scene, treePositions) {
-    const trees = scene.physics.add.group();
+    const trees = scene.physics.add.group(); // Crear un grupo de árboles
 
+    // Generar cada árbol en las posiciones definidas
     treePositions.forEach(position => {
-        const tree = trees.create(position.x, position.y, 'arbol').setInteractive();
-        tree.setImmovable(true);
-        tree.setOrigin(0.5, 1);
-        tree.body.setSize(tree.width * 0.2, tree.height * 0.2);
-        tree.body.setOffset(tree.width * 0.42, tree.height * 0.8);
-        tree.clickCount = 0; // Inicializar el contador de clics
+        const tree = trees.create(position.x, position.y, 'arbol').setInteractive(); // Árbol interactivo
+        tree.setImmovable(true); // El árbol no se mueve si lo chocan
+        tree.setOrigin(0.5, 1); // Cambiar el punto de origen del sprite
+        tree.body.setSize(tree.width * 0.2, tree.height * 0.2); // Reducir el área de colisión
+        tree.body.setOffset(tree.width * 0.42, tree.height * 0.8); // Ajustar el offset del cuerpo
+        tree.clickCount = 0; // Contador de clics para talar el árbol
 
-        tree.on('pointerdown', function() {
+        // Evento al hacer clic en el árbol
+        tree.on('pointerdown', function () {
             handleTreeClick(scene, tree);
         });
     });
 
-    return trees;
+    return trees; // Devolver el grupo de árboles creados
 }
 
-// Función que maneja el clic en los árboles
+// Función que maneja la tala del árbol al hacer clic
 function handleTreeClick(scene, tree) {
-    tree.clickCount++;
+    tree.clickCount++; // Incrementa el contador de clics en el árbol
 
+    // Animación de sacudida del árbol al ser clicado
     const shakeTween = scene.tweens.add({
         targets: tree,
-        angle: { from: -10, to: 10 },
-        duration: 100,
-        yoyo: true,
-        repeat: 3,
+        angle: { from: -10, to: 10 }, // Oscila entre -10 y 10 grados
+        duration: 100, // Duración de la sacudida
+        yoyo: true, // Repetir hacia atrás después de terminar
+        repeat: 3, // Número de veces que repite la animación
         onComplete: () => {
-            tree.setAngle(0); // Resetear el ángulo después de la animación
+            tree.setAngle(0); // Restablecer el ángulo al terminar
+            if (tree.clickCount >= 3) { // Si se ha clicado 3 veces
+                shakeTween.stop(); // Detener animación de sacudida
+                tree.setTexture('tocon'); // Cambiar textura del árbol a tronco
+                tree.disableInteractive(); // Desactivar la interactividad del árbol
 
-            if (tree.clickCount >= 3) {
-                shakeTween.stop();
-                tree.setAngle(0); // Asegurarse de que vuelva a su posición original
-                tree.setTexture('tocon');
-                tree.disableInteractive();
+                // Añadir un objeto al inventario cuando se tala el árbol
+                addItemToInventory(scene, 'item1'); // Cambiar 'item1' según lo que quieras
 
                 // Restaurar el árbol después de 10 segundos
                 scene.time.delayedCall(10000, () => {
-                    tree.setTexture('arbol');
-                    tree.setInteractive();
-                    tree.clickCount = 0; // Reiniciar contador
+                    tree.setTexture('arbol'); // Cambiar de nuevo la textura a árbol
+                    tree.setInteractive(); // Hacerlo interactivo otra vez
+                    tree.clickCount = 0; // Reiniciar el contador de clics
                 });
             }
         }
     });
 }
 
-// Función para generar posiciones aleatorias de árboles sin superposición
+// Función que genera posiciones de árboles sin superponerlos
 function generateNonOverlappingTreePositions(minDistance) {
     const positions = [];
 
+    // Generar 'numTrees' posiciones no superpuestas
     for (let i = 0; i < numTrees; i++) {
         let validPosition = false;
         let x, y;
 
-        // Intentar generar una posición válida hasta que se logre
+        // Intentar generar una posición válida
         while (!validPosition) {
-            x = Phaser.Math.Between(50, fondoX - 50); // Evita los bordes del mapa
-            y = Phaser.Math.Between(50, fondoY - 50);
+            x = Phaser.Math.Between(50, fondoX - 50); // Generar coordenada X
+            y = Phaser.Math.Between(50, fondoY - 50); // Generar coordenada Y
             validPosition = true;
 
-            // Verificar si la nueva posición está lo suficientemente lejos de las anteriores
+            // Verificar que la posición esté lo suficientemente lejos de otras
             for (let pos of positions) {
                 const distance = Phaser.Math.Distance.Between(x, y, pos.x, pos.y);
                 if (distance < minDistance) {
-                    validPosition = false; // Si están muy cerca, no es una posición válida
+                    validPosition = false;
                     break;
                 }
             }
         }
 
-        // Si encontramos una posición válida, la añadimos a la lista
+        // Si es válida, añadir la posición al array
         positions.push({ x: x, y: y });
     }
 
-    return positions;
+    return positions; // Devolver las posiciones generadas
 }
 
-
-// Crear un grupo de corazones sobre el personaje
+// Función para crear los corazones (vidas) sobre el jugador
 function createHearts(scene) {
-    heartsGroup = scene.add.group();
+    heartsGroup = scene.add.group(); // Crear grupo de corazones (vidas)
 
+    // Añadir 'lives' corazones al grupo
     for (let i = 0; i < lives; i++) {
-        // Crear los corazones como sprites más pequeños
-        let heart = scene.add.image(player.x, player.y, 'vida').setScale(0.5);
-
-        heartsGroup.add(heart);
+        let heart = scene.add.image(player.x, player.y, 'vida').setScale(0.4); // Corazón
+        heartsGroup.add(heart); // Añadir cada corazón al grupo
     }
 }
 
+// Añadir un ítem al inventario
+function addItemToInventory(scene, itemKey) {
+
+    inventory.push(itemKey); // Añadir al inventario
+
+    const item = scene.physics.add.image(0, 0, itemKey).setInteractive().setScale(0.5); // Crear el ítem
+    item.on('pointerdown', function () {
+
+        // Hacer el ítem arrastrable
+        scene.input.setDraggable(item);
+        scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
+            gameObject.x = dragX; // Actualizar posición X
+            gameObject.y = dragY; // Actualizar posición Y
+        });
+
+        // Restaurar la opacidad al soltar
+        item.on('dragend', function () {
+            this.setAlpha(1);
+            scene.input.setDraggable(item, false); // Desactivar arrastre
+        });
+    });
+
+    inventoryItems.push(item);
+    updateInventoryDisplay(); // Actualizar la visualización del inventario
+}
+
+// Función que actualiza la visualización del inventario
+function updateInventoryDisplay() {
+    const startX = game.config.width / 2 - 150; // Posición inicial del inventario
+    const startY = game.config.height / 2 - 100; // Posición inicial del inventario
+
+    // Posicionar cada ítem en el inventario
+    inventoryItems.forEach((item, index) => {
+        item.x = startX + index * 50; // Posición X
+        item.y = startY + 50; // Posición Y
+        item.setVisible(inventoryVisible); // Controlar visibilidad
+    });
+}
+
+// Función principal de creación del juego
 function create() {
-    background = this.add.tileSprite(fondoX / 2, fondoY / 2, fondoX, fondoY, 'grass');
+    background = this.add.tileSprite(fondoX / 2, fondoY / 2, fondoX, fondoY, 'grass'); // Crear fondo
 
     // Crear jugador y corazones
     createPlayer(this);
-
-
-    // Crear árboles
-    const treePositions = generateNonOverlappingTreePositions(100); // 100 píxeles de separación mínima
-    this.trees = createTrees(this, treePositions);
     createHearts(this);
-    // Añadir colisiones entre jugador y árboles
-    this.physics.add.collider(player, this.trees);
 
-    // Configurar controles del teclado (Flechas y WASD)
-    cursors = this.input.keyboard.createCursorKeys();
+    // Crear árboles y añadir colisión con el jugador
+    const treePositions = generateNonOverlappingTreePositions(100); // Separación mínima de 100px
+    this.trees = createTrees(this, treePositions);
+    this.physics.add.collider(player, this.trees); // Colisión entre jugador y árboles
+
+
+    // Controles de movimiento (teclado)
+    cursors = this.input.keyboard.createCursorKeys(); // Flechas de dirección
     wasdKeys = this.input.keyboard.addKeys({
         up: Phaser.Input.Keyboard.KeyCodes.W,
         left: Phaser.Input.Keyboard.KeyCodes.A,
@@ -164,43 +215,60 @@ function create() {
         right: Phaser.Input.Keyboard.KeyCodes.D
     });
 
+    // Mostrar/ocultar inventario con la tecla 'E'
+    this.input.keyboard.on('keydown-E', () => {
+        inventoryVisible = !inventoryVisible; // Alternar visibilidad
+        inventoryBackground.setVisible(inventoryVisible); // Mostrar u ocultar fondo
+        inventoryItems.forEach(item => item.setVisible(inventoryVisible)); // Mostrar/ocultar ítems
+        updateInventoryDisplay(); // Actualizar el inventario visual
+    });
+
+    // Crear el fondo del inventario
+    inventoryBackground = this.add.graphics();
+    inventoryBackground.fillStyle(0x000000, 0.8); // Color negro con opacidad
+    inventoryBackground.fillRect((this.cameras.main.width / 2) - 150, (this.cameras.main.height / 2) - 100, 300, 200); // Tamaño y posición
+
+    // Ocultar inventario inicialmente
+    inventoryBackground.setVisible(false);
+
+    // Configurar la cámara para que siga al jugador
     this.cameras.main.startFollow(player);
-    this.cameras.main.setZoom(2.2);
-    this.cameras.main.setBounds(0, 0, fondoX, fondoY);
-    this.physics.world.setBounds(0, 0, fondoX, fondoY);
+    this.cameras.main.setZoom(2.2); // Zoom de la cámara
+    this.cameras.main.setBounds(0, 0, fondoX, fondoY); // Límites de la cámara
+    this.physics.world.setBounds(0, 0, fondoX, fondoY); // Límites del mundo del juego
 }
 
 const speed=100;
 function update() {
-    player.setVelocity(0);
-    // Movimiento del jugador (Flechas y WASD)
+    player.setVelocity(0); // Detener al jugador por defecto
+
+    // Control de movimiento con flechas o teclas WASD
     if (cursors.left.isDown || wasdKeys.left.isDown) {
-        player.setVelocityX(-speed);
-        player.flipX = false;
+        player.setVelocityX(-speed); // Mover a la izquierda
+        player.flipX = false; // No voltear horizontalmente
     } else if (cursors.right.isDown || wasdKeys.right.isDown) {
-        player.setVelocityX(speed);
-        player.flipX = true;
+        player.setVelocityX(speed); // Mover a la derecha
+        player.flipX = true; // Voltear horizontalmente
     }
 
     if (cursors.up.isDown || wasdKeys.up.isDown) {
-        player.setVelocityY(-speed);
+        player.setVelocityY(-speed); // Mover hacia arriba
     } else if (cursors.down.isDown || wasdKeys.down.isDown) {
-        player.setVelocityY(speed);
+        player.setVelocityY(speed); // Mover hacia abajo
     }
 
+    // Reproducir la animación de caminar solo si el jugador se está moviendo
     if (player.body.velocity.x !== 0 || player.body.velocity.y !== 0) {
         player.anims.play("bear_walk", true);
     } else {
-        player.anims.play("bear_walk", false);
+        player.anims.play("bear_walk", false); // Detener animación si no hay movimiento
     }
 
-    // Calcular el ancho total de los corazones
-    const totalWidth = (lives - 1) * 15; // Espaciado entre corazones (20px entre cada uno)
-
-    // Actualizar la posición de los corazones para que siempre estén centrados sobre el jugador
+    // Actualizar la posición de los corazones (vidas) sobre el jugador
+    const totalWidth = (lives - 1) * 5.9; // Espaciado entre corazones
     heartsGroup.children.iterate((heart, index) => {
-        heart.x = player.x - totalWidth / 2 + (index * 15); // Centramos los corazones
-        heart.y = player.y - 18; // Mantener los corazones encima del jugador
+        heart.x = player.x - totalWidth / 2 + (index * 7); // Centramos los corazones
+        heart.y = player.y - 17; // Mantener los corazones encima del jugador
     });
 }
  
