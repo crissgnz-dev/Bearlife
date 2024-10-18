@@ -1,0 +1,14 @@
+body{
+    background-color: #183D3D;
+}
+
+main {
+    margin: 5%;
+    display: flex;
+    justify-content: center;
+}
+
+canvas{
+    border-radius: 0.8%;
+    border: 15px double #93B1A6;
+}
