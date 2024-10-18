@@ -8,7 +8,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 0 },
-            debug: false, // Cambia a 'false' en producción
+            debug: true, // Cambia a 'false' en producción
         }
     },
     scene: {
@@ -34,7 +34,7 @@ function preload() {
 }
 
 function createPlayer(scene) {
-    player = scene.physics.add.sprite(100, 100, 'player').setScale(0.8);
+    player = scene.physics.add.sprite(fondoX/2, fondoY/2, 'player').setScale(0.8);
     player.setCollideWorldBounds(true);
 
     scene.anims.create({
@@ -170,7 +170,7 @@ function create() {
     this.physics.world.setBounds(0, 0, fondoX, fondoY);
 }
 
-let speed=100;
+const speed=100;
 function update() {
     player.setVelocity(0);
     // Movimiento del jugador (Flechas y WASD)
@@ -203,3 +203,4 @@ function update() {
         heart.y = player.y - 18; // Mantener los corazones encima del jugador
     });
 }
+ 

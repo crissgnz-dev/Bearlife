@@ -1,7 +1,9 @@
 document.addEventListener("DOMContentLoaded", function() {
     const images = [
-        './imagenes/bearlife.png',
-        './imagenes/bearlife2.png',
+        './imagenes/bearlife_invierno.png',
+        './imagenes/bearlife_verano.png',
+        './imagenes/bearlife_primavera.png',
+        './imagenes/bearlife_otoño.png',
     ];
 
     const logoImg = document.getElementById('logo-img');
