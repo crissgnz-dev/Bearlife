@@ -7,12 +7,8 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 0 }, // No hay gravedad ya que es un juego 2D con movimiento libre
-            debug: true,
-            debugShowBody: true,        // Muestra los cuerpos de colisiones
-            debugShowStaticBody: true,  // Muestra cuerpos estáticos
-            debugShowVelocity: true,    // Muestra las líneas de la velocidad de los cuerpos
-            debugBodyColor: 0x000C00   // Color para los cuerpos (verde)
+            gravity: { y: 0 },
+            debug: true, // Cambia a 'false' en producción
         }
     },
     scene: {
@@ -48,8 +44,8 @@ function preload() {
 
 // Función para crear el jugador
 function createPlayer(scene) {
-    player = scene.physics.add.sprite(100, 100, 'player').setScale(0.8); // Crear jugador
-    player.setCollideWorldBounds(true); // Limitar movimiento dentro del mundo del juego
+    player = scene.physics.add.sprite(fondoX/2, fondoY/2, 'player').setScale(0.8);
+    player.setCollideWorldBounds(true);
 
     // Animación del jugador caminando
     scene.anims.create({
@@ -251,6 +247,8 @@ function create() {
     this.physics.world.setBounds(0, 0, fondoX, fondoY); // Límites del mundo del juego
 }
 
+
+const speed=100;
 // Función de actualización del juego (se ejecuta en cada frame)
 function update() {
     player.setVelocity(0); // Detener al jugador por defecto
@@ -285,3 +283,4 @@ function update() {
     });
     
 }
+ 
