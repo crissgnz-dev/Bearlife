@@ -25,7 +25,7 @@ let player, cursors, wasdKeys, background, heartsGroup;
 let fondoX = 5000, fondoY = 5000; // Dimensiones del mapa
 const numTrees = 150; // Número total de árboles en el mapa
 let lives = 3; // Vidas del jugador
-let speed = 500;
+let speed = 100;
 let inventory = []; // Inventario donde se guardan los objetos recogidos
 let inventoryVisible = false; // Controla si el inventario está visible o no
 let inventoryBackground; // Fondo visual del inventario
@@ -248,7 +248,6 @@ function create() {
 }
 
 
-const speed=100;
 // Función de actualización del juego (se ejecuta en cada frame)
 function update() {
     player.setVelocity(0); // Detener al jugador por defecto
