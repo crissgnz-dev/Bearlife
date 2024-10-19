@@ -39,7 +39,10 @@ img {
 }
 
 header {
-    background-color: #252525;
+    top: 0;
+    right: 0;
+    position: absolute;
+    background-color: transparent;
     display: flex;
     justify-content: space-between; /* Distribuye el espacio */
     align-items: center; /* Alinea verticalmente */

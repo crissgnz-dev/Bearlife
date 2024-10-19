@@ -1,8 +1,8 @@
 // Configuración básica del juego en Phaser
 const config = {
     type: Phaser.AUTO,
-    width: window.innerWidth - 110,
-    height: window.innerHeight - 95,
+    width: 500,
+    height: 500,
     parent: 'juego',
     physics: {
         default: 'arcade',
@@ -25,7 +25,7 @@ let player, cursors, wasdKeys, background, heartsGroup;
 let fondoX = 5000, fondoY = 5000; // Dimensiones del mapa
 const numTrees = 150; // Número total de árboles en el mapa
 let lives = 3; // Vidas del jugador
-let speed = 500;
+let speed = 100;
 let inventory = []; // Inventario donde se guardan los objetos recogidos
 let inventoryVisible = false; // Controla si el inventario está visible o no
 let inventoryBackground; // Fondo visual del inventario
@@ -44,7 +44,7 @@ function preload() {
 
 // Función para crear el jugador
 function createPlayer(scene) {
-    player = scene.physics.add.sprite(fondoX/2, fondoY/2, 'player').setScale(0.8);
+    player = scene.physics.add.sprite(300, 400, 'player').setScale(0.8);
     player.setCollideWorldBounds(true);
 
     // Animación del jugador caminando
@@ -198,15 +198,15 @@ function updateInventoryDisplay() {
 function create() {
     background = this.add.tileSprite(fondoX / 2, fondoY / 2, fondoX, fondoY, 'grass'); // Crear fondo
 
-    // Crear jugador y corazones
+    // Crear jugador
     createPlayer(this);
-    createHearts(this);
 
     // Crear árboles y añadir colisión con el jugador
     const treePositions = generateNonOverlappingTreePositions(100); // Separación mínima de 100px
     this.trees = createTrees(this, treePositions);
     this.physics.add.collider(player, this.trees); // Colisión entre jugador y árboles
-
+    
+    createHearts(this);
 
     // Controles de movimiento (teclado)
     cursors = this.input.keyboard.createCursorKeys(); // Flechas de dirección
@@ -248,7 +248,6 @@ function create() {
 }
 
 
-const speed=100;
 // Función de actualización del juego (se ejecuta en cada frame)
 function update() {
     player.setVelocity(0); // Detener al jugador por defecto
