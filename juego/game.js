@@ -1,18 +1,14 @@
 // Configuración básica del juego en Phaser
 const config = {
     type: Phaser.AUTO,
-    width: window.innerWidth - 100,
-    height: window.innerHeight - 90,
+    width: window.innerWidth - 110,
+    height: window.innerHeight - 95,
     parent: 'juego',
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 0 }, // No hay gravedad ya que es un juego 2D con movimiento libre
-            debug: true,
-            debugShowBody: true,        // Muestra los cuerpos de colisiones
-            debugShowStaticBody: true,  // Muestra cuerpos estáticos
-            debugShowVelocity: true,    // Muestra las líneas de la velocidad de los cuerpos
-            debugBodyColor: 0x000C00   // Color para los cuerpos (verde)
+            gravity: { y: 0 },
+            debug: true, // Cambia a 'false' en producción
         }
     },
     scene: {
@@ -29,6 +25,7 @@ let player, cursors, wasdKeys, background, heartsGroup;
 let fondoX = 5000, fondoY = 5000; // Dimensiones del mapa
 const numTrees = 150; // Número total de árboles en el mapa
 let lives = 3; // Vidas del jugador
+let speed = 500;
 let inventory = []; // Inventario donde se guardan los objetos recogidos
 let inventoryVisible = false; // Controla si el inventario está visible o no
 let inventoryBackground; // Fondo visual del inventario
@@ -42,12 +39,13 @@ function preload() {
     this.load.image('arbol', './img/arbol.png'); // Árboles del mapa
     this.load.image('tocon', './img/arbol_tronco.png'); // Tronco cuando un árbol es talado
     this.load.image('item1', './img/madera.png'); // Objeto de inventario (item1)
+    this.load.image('inventory', './img/inventario.png');
 }
 
 // Función para crear el jugador
 function createPlayer(scene) {
-    player = scene.physics.add.sprite(100, 100, 'player').setScale(0.8); // Crear jugador
-    player.setCollideWorldBounds(true); // Limitar movimiento dentro del mundo del juego
+    player = scene.physics.add.sprite(fondoX/2, fondoY/2, 'player').setScale(0.8);
+    player.setCollideWorldBounds(true);
 
     // Animación del jugador caminando
     scene.anims.create({
@@ -162,7 +160,7 @@ function addItemToInventory(scene, itemKey) {
 
     inventory.push(itemKey); // Añadir al inventario
 
-    const item = scene.physics.add.image(0, 0, itemKey).setInteractive().setScale(0.5); // Crear el ítem
+    const item = scene.physics.add.image(0, 0, itemKey).setInteractive().setScale(0.8); // Crear el ítem
     item.on('pointerdown', function () {
 
         // Hacer el ítem arrastrable
@@ -185,14 +183,14 @@ function addItemToInventory(scene, itemKey) {
 
 // Función que actualiza la visualización del inventario
 function updateInventoryDisplay() {
-    const startX = game.config.width / 2 - 150; // Posición inicial del inventario
-    const startY = game.config.height / 2 - 100; // Posición inicial del inventario
+    const startX = inventoryBackground.x + 25; // Margen desde el borde del fondo
+    const startY = inventoryBackground.y + 25; // Margen desde el borde del fondo
 
     // Posicionar cada ítem en el inventario
     inventoryItems.forEach((item, index) => {
-        item.x = startX + index * 50; // Posición X
-        item.y = startY + 50; // Posición Y
-        item.setVisible(inventoryVisible); // Controlar visibilidad
+        item.x = startX - 153; // Posición X dentro del inventario
+        item.y = startY - 95; // Posición Y dentro del inventario ds
+        item.setVisible(inventoryVisible); // Mostrar/ocultar ítems
     });
 }
 
@@ -222,28 +220,36 @@ function create() {
     // Mostrar/ocultar inventario con la tecla 'E'
     this.input.keyboard.on('keydown-E', () => {
         inventoryVisible = !inventoryVisible; // Alternar visibilidad
+        // Centrar el inventario respecto al jugador
+        const inventoryX = (player.x - inventoryBackground.displayWidth / 50)+5;
+        const inventoryY = (player.y - inventoryBackground.displayHeight / 50)+5;
+        // Actualizar la posición del fondo del inventario
+        inventoryBackground.setPosition(inventoryX, inventoryY);     
         inventoryBackground.setVisible(inventoryVisible); // Mostrar u ocultar fondo
         inventoryItems.forEach(item => item.setVisible(inventoryVisible)); // Mostrar/ocultar ítems
         updateInventoryDisplay(); // Actualizar el inventario visual
     });
 
-    // Crear el fondo del inventario
-    inventoryBackground = this.add.graphics();
-    inventoryBackground.fillStyle(0x000000, 0.8); // Color negro con opacidad
-    inventoryBackground.fillRect((this.cameras.main.width / 2) - 150, (this.cameras.main.height / 2) - 100, 300, 200); // Tamaño y posición
-
+    inventoryBackground = this.physics.add.staticImage((player.x), (player.y), "inventory");
+    inventoryBackground.displayWidth = 300;  // Ancho del inventario
+    inventoryBackground.displayHeight = 200; // Alto del inventario
+    // Crear el cuerpo de colisión del inventario
+    inventoryBackground.body.setSize(inventoryBackground.displayWidth, inventoryBackground.displayHeight);
+    // Actualizar la posición del collider
+    console.log(inventoryBackground.body.position);
     // Ocultar inventario inicialmente
     inventoryBackground.setVisible(false);
 
     // Configurar la cámara para que siga al jugador
     this.cameras.main.startFollow(player);
-    this.cameras.main.setZoom(2.2); // Zoom de la cámara
+    this.cameras.main.setZoom(2); // Zoom de la cámara
     this.cameras.main.setBounds(0, 0, fondoX, fondoY); // Límites de la cámara
     this.physics.world.setBounds(0, 0, fondoX, fondoY); // Límites del mundo del juego
 }
 
+
+const speed=100;
 // Función de actualización del juego (se ejecuta en cada frame)
-let speed = 100;
 function update() {
     player.setVelocity(0); // Detener al jugador por defecto
 
@@ -275,4 +281,6 @@ function update() {
         heart.x = player.x - totalWidth / 2 + (index * 7); // Centramos los corazones
         heart.y = player.y - 17; // Mantener los corazones encima del jugador
     });
+    
 }
+ 
