@@ -1,8 +1,8 @@
 // Configuración básica del juego en Phaser
 const config = {
     type: Phaser.AUTO,
-    width: 500,
-    height: 500,
+    width: 800,
+    height: 600,
     parent: 'juego',
     physics: {
         default: 'arcade',
@@ -26,6 +26,15 @@ let fondoX = 5000, fondoY = 5000; // Dimensiones del mapa
 const numTrees = 150; // Número total de árboles en el mapa
 let lives = 3; // Vidas del jugador
 let speed = 100;
+
+// Animales
+let hostilesSpeed = 90;
+let animalSpeed = 150;
+const detectionRange = 300; // Rango de detección para lobos
+const numPassiveAnimals = 100; // Número de animales pasivos
+const numHostileAnimals = 100;  // Número de animales hostiles
+
+// Inventario
 let inventory = []; // Inventario donde se guardan los objetos recogidos
 let inventoryVisible = false; // Controla si el inventario está visible o no
 let inventoryBackground; // Fondo visual del inventario
@@ -40,6 +49,14 @@ function preload() {
     this.load.image('tocon', './img/arbol_tronco.png'); // Tronco cuando un árbol es talado
     this.load.image('item1', './img/madera.png'); // Objeto de inventario (item1)
     this.load.image('inventory', './img/inventario.png');
+    // Animales Pasivos
+    this.load.spritesheet('deer', './img/ciervo.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('rabbit', './img/conejo.png', { frameWidth: 16, frameHeight: 16 });
+
+    // Animales Hostiles
+    this.load.spritesheet('boar', './img/jabali.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('wolf', './img/lobo.png', { frameWidth: 64, frameHeight: 32});
+    this.load.spritesheet('tiger', './img/tigre.png', { frameWidth: 55, frameHeight: 27});
 }
 
 // Función para crear el jugador
@@ -155,6 +172,267 @@ function createHearts(scene) {
     }
 }
 
+function generatePassiveAnimals(scene, numAnimals) {
+    const animals = scene.physics.add.group();
+
+    for (let i = 0; i < numAnimals; i++) {
+        let x, y;
+        do {
+            x = Phaser.Math.Between(100, fondoX - 100);
+            y = Phaser.Math.Between(100, fondoY - 100);
+        } while (isWithinCameraView(x, y, scene.cameras.main));
+
+        // Seleccionar aleatoriamente qué tipo de animal generar
+        const animalType = Phaser.Math.Between(0, 1); // 0 para conejo, 1 para ciervo
+        
+        let animal;
+        if (animalType === 0) {
+            // Crear un conejo
+            animal = animals.create(x, y, 'rabbit').setInteractive();
+            animal.animalType = 'rabbit'; // Asignar tipo de animal
+            scene.anims.create({
+                key: 'rabbit_walk',
+                frames: scene.anims.generateFrameNumbers('rabbit', { start: 0, end: 1 }),
+                frameRate: 9,
+                repeat: -1
+            });
+        } else {
+            // Crear un ciervo
+            animal = animals.create(x, y, 'deer').setInteractive().setScale(0.8);
+            animal.animalType = 'deer'; // Asignar tipo de animal
+            scene.anims.create({
+                key: 'deer_walk',
+                frames: scene.anims.generateFrameNumbers('deer', { start: 1, end: 5 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+
+        animal.health = 3; // Asignar vida a cada animal pasivo
+
+        // Mover el animal aleatoriamente
+        let animalEvent = scene.time.addEvent({
+            delay: 1000,
+            callback: () => moveAnimalRandomly(scene, animal),
+            loop: true
+        });
+        
+        // Escucha cuando se clickea al animal para hacerle daño
+        animal.on('pointerdown', () => {
+            dealDamageToAnimal(animal, scene, animalEvent);
+        });
+    }
+
+    return animals;
+}
+
+
+// Verifica si está dentro de la vista de la cámara
+function isWithinCameraView(x, y, camera) {
+    const cameraBounds = camera.worldView;
+    return x >= cameraBounds.x && x <= cameraBounds.x + cameraBounds.width &&
+           y >= cameraBounds.y && y <= cameraBounds.y + cameraBounds.height;
+}
+
+function moveAnimalRandomly(scene, animal) {
+    const directions = ['left', 'right', 'up', 'down'];
+    const direction = Phaser.Utils.Array.GetRandom(directions);
+
+    let velocityX = 0;
+    let velocityY = 0;
+
+    // Usamos if para establecer la velocidad en X según la dirección
+    if (direction === 'left') {
+        velocityX = -animalSpeed; // Mover a la izquierda
+        if (animal.animalType === 'rabbit') {
+            animal.anims.play('rabbit_walk');
+        } else if (animal.animalType === 'deer') {
+            animal.anims.play('deer_walk');
+        }
+        animal.flipX = false;
+    } else if (direction === 'right') {
+        velocityX = animalSpeed; // Mover a la derecha
+        if (animal.animalType === 'rabbit') {
+            animal.anims.play('rabbit_walk');
+        } else if (animal.animalType === 'deer') {
+            animal.anims.play('deer_walk');
+        }
+        animal.flipX = true;
+    } else {
+        velocityX = 0; // No moverse en el eje X
+    }
+
+    // Usamos if para establecer la velocidad en Y según la dirección
+    if (direction === 'up') {
+        velocityY = -animalSpeed; // Mover hacia arriba
+        if (animal.animalType === 'rabbit') {
+            animal.anims.play('rabbit_walk');
+        } else if (animal.animalType === 'deer') {
+            animal.anims.play('deer_walk');
+        }
+    } else if (direction === 'down') {
+        velocityY = animalSpeed; // Mover hacia abajo
+        if (animal.animalType === 'rabbit') {
+            animal.anims.play('rabbit_walk');
+        } else if (animal.animalType === 'deer') {
+            animal.anims.play('deer_walk');
+        }
+    } else {
+        velocityY = 0; // No moverse en el eje Y
+    }
+
+    // Aplicar las velocidades calculadas al animal
+    animal.setVelocity(velocityX, velocityY);
+}
+
+
+
+function moveHostileAnimalTowardsPlayer(scene, animal, speed, animationKey) {
+    const distance = Phaser.Math.Distance.Between(animal.x, animal.y, player.x, player.y);
+
+    if (distance < detectionRange) {
+        const directionX = player.x - animal.x;
+        const directionY = player.y - animal.y;
+
+        const magnitude = Math.sqrt(directionX * directionX + directionY * directionY);
+        const normalizedX = directionX / magnitude;
+        const normalizedY = directionY / magnitude;
+
+        animal.setVelocity(normalizedX * speed, normalizedY * speed);
+        animal.flipX = directionX > 0;
+
+        animal.anims.play(animationKey, true); // Reproducir la animación específica del animal
+    } else {
+        animal.setVelocity(0);
+    }
+}
+
+function createHostileAnimal(scene, x, y, type) {
+
+    let animal;
+    let speed;
+    let animationKey;
+    let health;
+
+    if (type === 'wolf') {
+        animal = scene.physics.add.sprite(x, y, 'wolf').setInteractive().setScale(0.5);
+        speed = hostilesSpeed;
+        animationKey = 'wolf_walk';
+        health = 5;
+        scene.anims.create({
+            key: animationKey,
+            frames: scene.anims.generateFrameNumbers('wolf', { start: 0, end: 4 }),
+            frameRate: 6,
+            repeat: -1
+        });
+    } else if (type === 'boar') {
+        animal = scene.physics.add.sprite(x, y, 'boar').setInteractive().setScale(0.6);
+        speed = hostilesSpeed;
+        animationKey = 'boar_walk';
+        health = 5;
+        scene.anims.create({
+            key: animationKey,
+            frames: scene.anims.generateFrameNumbers('boar', { start: 0, end: 6 }),
+            frameRate: 6,
+            repeat: -1
+        });
+    } else if (type === 'tiger') {
+        animal = scene.physics.add.sprite(x, y, 'tiger').setInteractive().setScale(0.6);
+        speed = hostilesSpeed + 20; // Tigre más rápido
+        animationKey = 'tiger_walk';
+        health = 6;
+        scene.anims.create({
+            key: animationKey,
+            frames: scene.anims.generateFrameNumbers('tiger', { start: 0, end: 5 }),
+            frameRate: 6,
+            repeat: -1
+        });
+    }
+
+    animal.health = health;
+
+    // Configurar el comportamiento de movimiento hacia el jugador
+    let animalEvent = scene.time.addEvent({
+        delay: 100,
+        callback: () => moveHostileAnimalTowardsPlayer(scene, animal, speed, animationKey),
+        loop: true
+    });
+
+    // Escucha cuando se clickea al animal para hacerle daño
+    animal.on('pointerdown', () => {
+        dealDamageToAnimal(animal, scene, animalEvent);
+    });
+
+    return animal;
+}
+
+
+// Función para generar varios animales hostiles
+function generateHostileAnimals(scene, numAnimals) {
+    const animals = scene.physics.add.group();
+
+    for (let i = 0; i < numAnimals; i++) {
+        let x, y;
+        do {
+            x = Phaser.Math.Between(50, fondoX - 50);
+            y = Phaser.Math.Between(50, fondoY - 50);
+        } while (isWithinCameraView(x, y, scene.cameras.main));
+
+        const animalType = Phaser.Math.RND.pick(['wolf', 'boar', 'tiger']);
+        const animal = createHostileAnimal(scene, x, y, animalType);
+
+        animals.add(animal);
+        scene.physics.add.overlap(player, animal, () => handleHostileAnimal(scene, animal), null, scene);
+    }
+
+    return animals;
+}
+
+
+function handleHostileAnimal(scene, animal) {
+    if (!player.invulnerable && lives != 0) {
+        lives -= 1;
+        heartsGroup.getChildren().pop().destroy();
+        player.invulnerable = true;
+        player.setTint(0xff0000);  // Cambiar a rojo al recibir daño
+        scene.time.delayedCall(1000, () => {
+            player.invulnerable = false;
+            player.clearTint();  // Volver al color original
+        });
+    }
+}
+
+function dealDamageToAnimal(animal, scene, animalEvent) {
+    if(animal.health!=0){
+        animal.health -= 1; // Reducir la salud del animal
+        animal.setVelocity(0)
+        // Cambiar el color a rojo
+        animal.setTint(0xff0000);
+        // Después de un pequeño tiempo, restaurar el color
+        scene.time.delayedCall(500, () => {
+            animal.clearTint();
+        }); 
+    }
+    // Si la salud del animal es 0, destruirlo
+    if (animal.health === 0) {
+        // Desactivar cualquier colisión y movimiento
+        animal.body.enable = false; // Desactivar colisiones físicas
+        animal.anims.stop();
+
+        // Remover el animal del grupo, si está en uno
+        if (animal.parentContainer) {
+            animal.parentContainer.remove(animal);
+        }
+
+        // Usar un retraso para asegurarte de que no está en uso en otro evento
+        scene.time.delayedCall(50, () => {
+            animalEvent.remove();
+            animal.destroy();
+        });
+    }
+
+}
+
 // Añadir un ítem al inventario
 function addItemToInventory(scene, itemKey) {
 
@@ -201,6 +479,10 @@ function create() {
     // Crear jugador
     createPlayer(this);
 
+    this.animals = generatePassiveAnimals(this, numPassiveAnimals);
+    
+    generateHostileAnimals(this, numHostileAnimals);
+
     // Crear árboles y añadir colisión con el jugador
     const treePositions = generateNonOverlappingTreePositions(100); // Separación mínima de 100px
     this.trees = createTrees(this, treePositions);
@@ -229,7 +511,6 @@ function create() {
         inventoryItems.forEach(item => item.setVisible(inventoryVisible)); // Mostrar/ocultar ítems
         updateInventoryDisplay(); // Actualizar el inventario visual
     });
-
     inventoryBackground = this.physics.add.staticImage((player.x), (player.y), "inventory");
     inventoryBackground.displayWidth = 300;  // Ancho del inventario
     inventoryBackground.displayHeight = 200; // Alto del inventario

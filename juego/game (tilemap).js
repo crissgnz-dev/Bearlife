@@ -22,7 +22,7 @@ const game = new Phaser.Game(config);
 
 let player, cursors, wasdKeys, background, heartsGroup;
 let fondoX = 5000, fondoY = 5000;
-const numTrees = 150; // Número total de árboles
+const numTrees = 15; // Número total de árboles
 const numRocks = 50;  // Número total de rocas
 let lives = 3; // Vidas del jugador
 
