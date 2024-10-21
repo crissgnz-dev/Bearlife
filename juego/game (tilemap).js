@@ -1,8 +1,8 @@
 // Configuración del juego
 const config = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
+    width: window.innerWidth - 100,
+    height: window.innerHeight - 100,
     parent: 'juego',
     physics: {
         default: 'arcade',
