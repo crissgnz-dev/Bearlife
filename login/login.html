@@ -8,10 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <script src="/login/login.js"></script>
 </head>
 <body>
     <img src="../imagenes/fondo.gif" id="fondo" alt="">
-    <div class="login">
+    <div class="login" id="login-section">
         <h2>Iniciar Sesión</h2>
         <form onsubmit="login(event)" action="/api/login" method="POST">
             <div class="input">
@@ -28,13 +29,22 @@
                     <div class="icon"><img src="/login/icon/lock.png" alt=""></div>
                 </div>
             </div>
-            <button class="button-54" type="submit">Entrar</button>
+            <div>
+                <div style="width: 100%; display: flex; align-items:center; justify-content: center;">
+                    <button style="padding-right: 0.5rem; padding-left: 0.5rem; margin: 2%; font-size: 0.8em;" class="button-54" type="submit" >entrar</button>
+                    <button style="padding-right: 0.5rem; padding-left: 0.5rem; margin: 2%; font-size: 0.8em;"class="button-54" onclick="volver()">Volver</button>
+                </div>
+            </div>
         </form>
     </div>
-
-    <!-- Aquí aparecerá el nombre del usuario al iniciar sesión -->
-    <div id="user-info" style="display: none;">
-        Bienvenido, <span id="display-username"></span>!
+    
+    <!-- Aquí se mostrará el nombre del usuario logueado y el botón de logout -->
+    <div id="user-info" style="display: none; width: 80%;">
+        <h2>Bienvenido, <span id="display-username"></span>!</h2>
+        <div style="width: 100%; display: flex; align-items:center; justify-content: center;">
+            <button style="padding-left: 1rem; padding-right: 1rem; width: 15%; margin: 2%; font-size: 0.8em;" class="button-54" onclick="logout()">Cerrar Sesión</button>
+            <button style="padding-left: 0.5rem; padding-right: 0.5rem; margin: 2%; font-size: 0.8em;"class="button-54" onclick="volver()">Volver</button>
+        </div>
     </div>
 
     <script src="login.js"></script>
