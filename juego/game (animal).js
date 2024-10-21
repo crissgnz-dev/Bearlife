@@ -1,14 +1,14 @@
 // Configuración del juego
 const config = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
+    width: window.innerWidth - 100,
+    height: window.innerHeight - 100,
     parent: 'juego',
     physics: {
         default: 'arcade',
         arcade: {
             gravity: { y: 0 },
-            debug: true,
+            debug: false,
         }
     },
     scene: {
@@ -26,7 +26,7 @@ const numTrees = 150;
 let lives = 3;
 let hostilesSpeed = 90;
 let animalSpeed = 150;
-const detectionRange = 300; // Rango de detección para lobos
+const detectionRange = 100; // Rango de detección para lobos
 
 // Variables configurables para la cantidad de animales
 const numPassiveAnimals = 500; // Número de animales pasivos

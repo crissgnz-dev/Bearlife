@@ -1,14 +1,14 @@
 // Configuración básica del juego en Phaser
 const config = {
     type: Phaser.AUTO,
-    width: 500,
-    height: 500,
+    width: window.innerWidth - 100,
+    height: window.innerHeight - 100,
     parent: 'juego',
     physics: {
         default: 'arcade',
         arcade: {
             gravity: { y: 0 },
-            debug: true, // Cambia a 'false' en producción
+            debug: false, // Cambia a 'false' en producción
         }
     },
     scene: {
