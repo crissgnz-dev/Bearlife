@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bearlife</title>
+    <link rel="stylesheet" href="singUp.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <img src="../imagenes/fondo.gif" id="fondo" alt="">
+    <div class="login">
+        <h2>Crear Cuenta</h2>
+        <form onsubmit="signUp(event)" action="/api/login" method="POST">
+            <div class="input">
+                <label for="username">Usuario</label>
+                <div>
+                    <input type="text" id="username" name="username" required>
+                    <div class="icon"><img src="/login/icon/login.png" alt=""></div>
+                </div>
+            </div>
+            <div class="input">
+                <label for="password">Contraseña</label>
+                <div>
+                    <input type="password" id="password" name="password" minlength="8" required>
+                    <div class="icon"><img src="/login/icon/lock.png" alt=""></div>
+                </div>
+            </div>
+            <button class="button-54" type="submit">Crear</button>
+        </form>
+    </div>
+
+    <!-- Aquí aparecerá el nombre del usuario al iniciar sesión -->
+    <div id="user-info" style="display: none;">
+        Bienvenido, <span id="display-username"></span>!
+    </div>
+
+    <script src="singUp.js"></script>
+</body>
+</html>

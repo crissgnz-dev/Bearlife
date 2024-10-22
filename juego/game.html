@@ -9,21 +9,39 @@
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-  <link rel="stylesheet" href="/Bearlife/header.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div>
     <header>
       <div class="logo"><a href="../index.html"><img src="../imagenes/bearlife.png" alt=""></a></div>
-      <div class="botones">
-        <a href="../login/login.html"><button class="button-54" role="button">Login</button></a>
-        <button class="button-54" role="button">Sign out</button>
-      </div>
+      <div class="botones" style="width: 100%; height: 8vh; align-content: center; justify-content: center;">
+        <div id="user-info" style="display: none;">
+            <a href="../login/login.html" style="text-decoration: none; color: white;"><span id="display-username" style=" font-family: 'Pixelify Sans', sans-serif; font-optical-sizing: auto; font-style: normal;"></span></a>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const username = localStorage.getItem('username');
+                if (username) {
+                    document.getElementById('user-info').style.display = 'block';
+                    document.getElementById('display-username').textContent = username;
+
+                    // Ocultar los botones de Login y Sign Up
+                    document.querySelector('a[name="logIn"]').style.display = 'none';
+                    document.querySelector('a[name="singUp"]').style.display = 'none';
+                }
+            });
+
+        </script>
+      <a name="logIn" href="./login/login.html"  onclick="savePage()"><button class="button-54" role="button">Login</button></a>
+      <a name="singUp" href="./sign Up/singUp.html" onclick="savePage()"><button class="button-54" role="button">Sign Up</button></a>
+    </div>
     </header>
     <main>
         <div id="juego"><script type="module" src="game.js"></script></div>
     </main>    
   </div>
+
 </body>
 </html>

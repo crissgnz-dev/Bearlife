@@ -1,14 +1,14 @@
 // Configuración básica del juego en Phaser
 const config = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
+    width: window.innerWidth - 100,
+    height: window.innerHeight - 100,
     parent: 'juego',
     physics: {
         default: 'arcade',
         arcade: {
             gravity: { y: 0 },
-            debug: true, // Cambia a 'false' en producción
+            debug: false, // Cambia a 'false' en producción
         }
     },
     scene: {
@@ -34,7 +34,6 @@ const detectionRange = 300; // Rango de detección para lobos
 const numPassiveAnimals = 100; // Número de animales pasivos
 const numHostileAnimals = 100;  // Número de animales hostiles
 
-// Inventario
 let inventory = []; // Inventario donde se guardan los objetos recogidos
 let inventoryVisible = false; // Controla si el inventario está visible o no
 let inventoryBackground; // Fondo visual del inventario
@@ -57,6 +56,7 @@ function preload() {
     this.load.spritesheet('boar', './img/jabali.png', { frameWidth: 48, frameHeight: 32 });
     this.load.spritesheet('wolf', './img/lobo.png', { frameWidth: 64, frameHeight: 32});
     this.load.spritesheet('tiger', './img/tigre.png', { frameWidth: 55, frameHeight: 27});
+
 }
 
 // Función para crear el jugador
@@ -343,7 +343,7 @@ function createHostileAnimal(scene, x, y, type) {
         health = 6;
         scene.anims.create({
             key: animationKey,
-            frames: scene.anims.generateFrameNumbers('tiger', { start: 0, end: 5 }),
+            frames: scene.anims.generateFrameNumbers('tiger', { start: 0, end: 3 }),
             frameRate: 6,
             repeat: -1
         });
@@ -433,6 +433,7 @@ function dealDamageToAnimal(animal, scene, animalEvent) {
 
 }
 
+
 // Añadir un ítem al inventario
 function addItemToInventory(scene, itemKey) {
 
@@ -480,7 +481,6 @@ function create() {
     createPlayer(this);
 
     this.animals = generatePassiveAnimals(this, numPassiveAnimals);
-    
     generateHostileAnimals(this, numHostileAnimals);
 
     // Crear árboles y añadir colisión con el jugador
@@ -511,6 +511,7 @@ function create() {
         inventoryItems.forEach(item => item.setVisible(inventoryVisible)); // Mostrar/ocultar ítems
         updateInventoryDisplay(); // Actualizar el inventario visual
     });
+
     inventoryBackground = this.physics.add.staticImage((player.x), (player.y), "inventory");
     inventoryBackground.displayWidth = 300;  // Ancho del inventario
     inventoryBackground.displayHeight = 200; // Alto del inventario
