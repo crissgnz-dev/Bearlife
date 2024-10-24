@@ -76,4 +76,3 @@ function volver(){
         window.location.href = '/index.html'; // O redirige a una página por defecto
     }
 }
-
