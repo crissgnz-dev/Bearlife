@@ -27,10 +27,11 @@ let lives = 3;
 let hostilesSpeed = 90;
 let animalSpeed = 150;
 const detectionRange = 250; // Rango de detección para lobos
-let inventory = []; // Inventario donde se guardan los objetos recogidos
+let inventory = {}; // Cambiado a objeto para almacenar cantidad por tipo
 let inventoryVisible = false; // Controla si el inventario está visible o no
 let inventoryBackground; // Fondo visual del inventario
-let inventoryItems = []; // Lista de objetos visuales en el inventario
+let inventorySlots = []; // Lista de slots del inventario
+const inventorySlotSize = 30; // Tamaño de cada slot
 
 // Variables configurables para la cantidad de animales
 const numPassiveAnimals = 60; // Número de animales pasivos
@@ -45,7 +46,7 @@ function preload() {
     this.load.spritesheet('rabbit', './img/conejo.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('wolf', './img/lobo.png', { frameWidth: 64, frameHeight: 32});
     this.load.image('item1', './img/madera.png'); // Objeto de inventario (item1)
-    this.load.image('inventory', './img/inventario.png');
+    this.load.image('inventory', './img/inventario 2.png');
 }
 
 function createPlayer(scene) {
@@ -98,7 +99,7 @@ function handleTreeClick(scene, tree) {
                 tree.disableInteractive(); // Desactivar la interactividad del árbol
 
                 // Añadir un objeto al inventario cuando se tala el árbol
-                addItemToInventory(scene, 'item1'); // Cambiar 'item1' según lo que quieras
+                addItemToInventory(scene, 'item1');
 
                 // Restaurar el árbol después de 10 segundos
                 scene.time.delayedCall(10000, () => {
@@ -150,40 +151,151 @@ function createHearts(scene) {
 
 // Añadir un ítem al inventario
 function addItemToInventory(scene, itemKey) {
+    console.log(`Añadiendo ítem: ${itemKey}`);
+    // Si el ítem ya existe en el inventario, incrementa la cantidad
+    if (inventory[itemKey]) {
+        inventory[itemKey].quantity++;
+        inventory[itemKey].quantityText.setText(inventory[itemKey].quantity);
+    } else {
+        // Si no existe, busca un slot vacío
+        const emptySlot = inventorySlots.find(slot => slot.isEmpty);
 
-    inventory.push(itemKey); // Añadir al inventario
+        if (emptySlot) {
+            // Crear el ítem en el slot vacío
+            const item = scene.add.image(emptySlot.x, emptySlot.y, itemKey).setOrigin(0.5).setInteractive().setScale(0.7);
+            item.itemKey = itemKey; // Asegúrate de asignar itemKey aquí
+            item.setVisible(true); // Asegúrate de que el ítem sea visible
 
-    const item = scene.physics.add.image(0, 0, itemKey).setInteractive().setScale(0.8); // Crear el ítem
-    item.on('pointerdown', function () {
+            // Hacer el ítem arrastrable dentro del inventario
+            item.on('pointerdown', function (pointer) {
+                scene.input.setDraggable(item);
+                item.setTint(0xFF00FF);
+            });
 
-        // Hacer el ítem arrastrable
-        scene.input.setDraggable(item);
-        scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
-            gameObject.x = dragX; // Actualizar posición X
-            gameObject.y = dragY; // Actualizar posición Y
-        });
+            scene.input.on('drag', function (pointer, gameObject, dragX, dragY) {
+                // Restringir el movimiento dentro del inventario
+                const inventoryBounds = inventoryBackground.getBounds();
+                const halfItemSize = inventorySlotSize / 2;
 
-        // Restaurar la opacidad al soltar
-        item.on('dragend', function () {
-            this.setAlpha(1);
-            scene.input.setDraggable(item, false); // Desactivar arrastre
-        });
-    });
+                if (dragX - halfItemSize >= inventoryBounds.left &&
+                    dragX + halfItemSize <= inventoryBounds.right &&
+                    dragY - halfItemSize >= inventoryBounds.top &&
+                    dragY + halfItemSize <= inventoryBounds.bottom) {
+                    gameObject.x = dragX;
+                    gameObject.y = dragY;
+                }
+            });
 
-    inventoryItems.push(item);
-    updateInventoryDisplay(); // Actualizar la visualización del inventario
+            scene.input.on('dragend', function (pointer, gameObject) {
+                // Al soltar, ajustar el ítem al slot más cercano
+                const closestSlot = getClosestSlot(gameObject.x, gameObject.y);
+
+                gameObject.clearTint();
+                if (closestSlot) {
+                    gameObject.x = closestSlot.x;
+                    gameObject.y = closestSlot.y;
+
+                    // Actualizar los slots
+                    inventorySlots.forEach(slot => {
+                        if (slot.item === gameObject) {
+                            slot.item = null;
+                            slot.isEmpty = true;
+                        }
+                    });
+
+                    closestSlot.item = gameObject;
+                    closestSlot.isEmpty = false;
+                } else {
+                    // Si no hay slot cercano, mover el ítem de vuelta a su posición original
+                    const originalSlot = inventory[gameObject.itemKey]?.slot;
+                    if (originalSlot) {
+                        gameObject.x = originalSlot.x;
+                        gameObject.y = originalSlot.y;
+                    }
+                }
+            });
+
+            // Crear texto para la cantidad
+            const quantityText = scene.add.text(emptySlot.x, emptySlot.y, '1', { fontSize: '10px', fill: '#fff' });
+            quantityText.setOrigin(1, -0.6); // Centrar el texto en el slot
+            quantityText.setVisible(true); // Asegúrate de que el texto sea visible
+
+            // Guardar en el inventario
+            inventory[itemKey] = {
+                item: item,
+                quantity: 1,
+                quantityText: quantityText
+            };
+
+            // Marcar el slot como ocupado
+            emptySlot.item = item;
+            emptySlot.isEmpty = false;
+        } else {
+            console.log('No hay espacio en el inventario');
+        }
+    }
 }
 
-// Función que actualiza la visualización del inventario
-function updateInventoryDisplay() {
-    const startX = inventoryBackground.x + 25; // Margen desde el borde del fondo
-    const startY = inventoryBackground.y + 25; // Margen desde el borde del fondo
 
-    // Posicionar cada ítem en el inventario
-    inventoryItems.forEach((item, index) => {
-        item.x = startX - 153; // Posición X dentro del inventario
-        item.y = startY - 95; // Posición Y dentro del inventario ds
-        item.setVisible(inventoryVisible); // Mostrar/ocultar ítems
+// Función para obtener el slot más cercano
+function getClosestSlot(x, y) {
+    let closestSlot = null;
+    let minDistance = Infinity;
+
+    inventorySlots.forEach(slot => {
+        const distance = Phaser.Math.Distance.Between(x, y, slot.x, slot.y);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestSlot = slot;
+        }
+    });
+
+    return closestSlot;
+}
+
+// Generar los slots del inventario
+function createInventorySlots(scene) {
+    const rows = 3;
+    const cols = 5;
+    const startX = inventoryBackground.x - (cols / 2) * inventorySlotSize + inventorySlotSize / 2;
+    const startY = inventoryBackground.y - (rows / 2) * inventorySlotSize + inventorySlotSize / 2;
+
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const x = startX + col * inventorySlotSize;
+            const y = startY + row * inventorySlotSize;
+
+            const slot = scene.add.rectangle(x, y, inventorySlotSize - 4, inventorySlotSize - 4, 0x000000, 0.2);
+            slot.setStrokeStyle(1, 0xffffff);
+            slot.setVisible(false); // Ocultar inicialmente
+
+            inventorySlots.push({
+                x: x,
+                y: y,
+                item: null,
+                isEmpty: true,
+                slotRect: slot,
+                col: col,
+                row: row
+            });
+        }
+    }
+
+    // Calcular el tamaño del fondo del inventario
+    inventoryBackground.displayWidth = cols * inventorySlotSize + 10;  // Ancho basado en los slots
+    inventoryBackground.displayHeight = rows * inventorySlotSize + 10; // Alto basado en los slots
+}
+
+
+// Mostrar u ocultar el inventario
+function toggleInventoryVisibility(visible) {
+    inventoryBackground.setVisible(visible);
+    inventorySlots.forEach(slot => {
+        slot.slotRect.setVisible(visible);
+        if (slot.item) {
+            slot.item.setVisible(visible);
+            inventory[slot.item.itemKey].quantityText.setVisible(visible);
+        }
     });
 }
 
@@ -323,22 +435,17 @@ function moveWolfTowardsPlayer(scene, wolf) {
     }
 }
 
-
-
-
-
 function handleHostileAnimal(scene, animal) {
-    if (lives!= 0){
+    if (lives != 0){
         if (!player.invulnerable) {
-        lives -= 1;
-        heartsGroup.getChildren().pop().destroy();
-        player.invulnerable = true;
-        scene.time.delayedCall(2000, () => {
-            player.invulnerable = false;
-        });
+            lives -= 1;
+            heartsGroup.getChildren().pop().destroy();
+            player.invulnerable = true;
+            scene.time.delayedCall(2000, () => {
+                player.invulnerable = false;
+            });
+        }
     }
-    }
-
 }
 
 function create() {
@@ -356,7 +463,6 @@ function create() {
 
     createHearts(this);
     
-    
     this.physics.add.collider(player, this.trees);
     
     cursors = this.input.keyboard.createCursorKeys();
@@ -367,28 +473,18 @@ function create() {
         right: Phaser.Input.Keyboard.KeyCodes.D
     });
 
+    // Crear el fondo del inventario
+    inventoryBackground = this.add.image(player.x, player.y, "inventory");
+    inventoryBackground.setVisible(false);
+
+    // Generar los slots del inventario
+    createInventorySlots(this);
+
     // Mostrar/ocultar inventario con la tecla 'E'
     this.input.keyboard.on('keydown-E', () => {
-        inventoryVisible = !inventoryVisible; // Alternar visibilidad
-        // Centrar el inventario respecto al jugador
-        const inventoryX = (player.x - inventoryBackground.displayWidth / 50)+5;
-        const inventoryY = (player.y - inventoryBackground.displayHeight / 50)+5;
-        // Actualizar la posición del fondo del inventario
-        inventoryBackground.setPosition(inventoryX, inventoryY);     
-        inventoryBackground.setVisible(inventoryVisible); // Mostrar u ocultar fondo
-        inventoryItems.forEach(item => item.setVisible(inventoryVisible)); // Mostrar/ocultar ítems
-        updateInventoryDisplay(); // Actualizar el inventario visual
+        inventoryVisible = !inventoryVisible; // Alternar visibilidad   
+        toggleInventoryVisibility(inventoryVisible); // Mostrar u ocultar inventario
     });
-
-    inventoryBackground = this.physics.add.staticImage((player.x), (player.y), "inventory");
-    inventoryBackground.displayWidth = 300;  // Ancho del inventario
-    inventoryBackground.displayHeight = 200; // Alto del inventario
-    // Crear el cuerpo de colisión del inventario
-    inventoryBackground.body.setSize(inventoryBackground.displayWidth, inventoryBackground.displayHeight);
-    // Actualizar la posición del collider
-    console.log(inventoryBackground.body.position);
-    // Ocultar inventario inicialmente
-    inventoryBackground.setVisible(false);
 
     this.cameras.main.startFollow(player);
     this.cameras.main.setZoom(2.2);
@@ -427,4 +523,26 @@ function update() {
         heart.x = player.x - totalWidth / 2 + (index * 7);
         heart.y = player.y - 17;
     });
+  
+    if (inventoryVisible) {
+        inventoryBackground.setPosition(player.x, player.y);
+        inventorySlots.forEach(slot => {
+            slot.slotRect.x = slot.x = inventoryBackground.x - (inventorySlotSize * 2) + ((slot.col) * inventorySlotSize);
+            slot.slotRect.y = slot.y = inventoryBackground.y - (inventorySlotSize) + ((slot.row) * inventorySlotSize);
+            
+            // Solo actualizar el item si existe
+            if (slot.item) {
+                slot.item.x = slot.x;
+                slot.item.y = slot.y;
+    
+                // Asegurarse de que el itemKey existe en el inventario antes de acceder a quantityText
+                const itemKey = slot.item.itemKey;
+                if (inventory[itemKey]) {
+                    inventory[itemKey].quantityText.x = slot.x + inventorySlotSize / 2 - 10;
+                    inventory[itemKey].quantityText.y = slot.y + inventorySlotSize / 2 - 20;
+                }
+            }
+        });
+    }
+    
 }
