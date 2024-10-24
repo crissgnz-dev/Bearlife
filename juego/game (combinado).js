@@ -523,7 +523,7 @@ function update() {
         heart.x = player.x - totalWidth / 2 + (index * 7);
         heart.y = player.y - 17;
     });
-
+  
     if (inventoryVisible) {
         inventoryBackground.setPosition(player.x, player.y);
         inventorySlots.forEach(slot => {
