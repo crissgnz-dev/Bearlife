@@ -65,6 +65,7 @@ function logout() {
 function savePage() {
     // Guarda la URL actual en sessionStorage o localStorage
     sessionStorage.setItem('previousPage', window.location.href);
+    console.log(sessionStorage)
 }
 
 function volver(){
