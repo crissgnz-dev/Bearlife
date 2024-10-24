@@ -21,7 +21,7 @@ const config = {
 const game = new Phaser.Game(config);
 
 // Variables globales
-let player, cursors, wasdKeys, background, heartsGroup;
+let player, cursors, wasdKeys, background, heartsGroup ,gameOverScreen;;
 let fondoX = 5000, fondoY = 5000; // Dimensiones del mapa
 const numTrees = 150; // Número total de árboles en el mapa
 let lives = 3; // Vidas del jugador
@@ -48,6 +48,8 @@ function preload() {
     this.load.image('tocon', './img/arbol_tronco.png'); // Tronco cuando un árbol es talado
     this.load.image('item1', './img/madera.png'); // Objeto de inventario (item1)
     this.load.image('inventory', './img/inventario.png');
+    this.load.image('gameOver', './img/game_over.png');
+
     // Animales Pasivos
     this.load.spritesheet('deer', './img/ciervo.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('rabbit', './img/conejo.png', { frameWidth: 16, frameHeight: 16 });
@@ -400,7 +402,18 @@ function handleHostileAnimal(scene, animal) {
             player.clearTint();  // Volver al color original
         });
     }
+    if (lives === 0) {
+        player.setTint(0xff0000);  // Cambiar a rojo el jugador
+        gameOverScreen.setVisible(true);  // Mostrar pantalla de Game Over
+        speed = 0;
+        player.anims.stop(); // Detener la animación del jugador
+        scene.input.keyboard.enabled = false; // Desactivar el control del jugador
+        scene.time.delayedCall(2000, () => {
+            window.location.href = window.location.href;
+        });
+    }
 }
+
 
 function dealDamageToAnimal(animal, scene, animalEvent) {
     if(animal.health!=0){
@@ -527,6 +540,11 @@ function create() {
     this.cameras.main.setZoom(2); // Zoom de la cámara
     this.cameras.main.setBounds(0, 0, fondoX, fondoY); // Límites de la cámara
     this.physics.world.setBounds(0, 0, fondoX, fondoY); // Límites del mundo del juego
+
+    gameOverScreen = this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'gameOver').setScale(0.5);
+    gameOverScreen.setOrigin(0.5);
+    gameOverScreen.setVisible(false); // Ocultar inicialmente
+    gameOverScreen.setScrollFactor(0); // Para que no se mueva con la cámara
 }
 
 
