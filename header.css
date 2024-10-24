@@ -2,7 +2,11 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    cursor: url('./juego/img/cursor.png') 16 16, auto; /* Hotspot definido */
 }
+
+/* Resto de tu CSS */
+
 
 .button-54 {
     font-family: "Pixelify Sans", sans-serif;
