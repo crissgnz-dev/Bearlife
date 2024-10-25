@@ -24,6 +24,9 @@ const game = new Phaser.Game(config);
 let player, cursors, wasdKeys, background, heartsGroup ,gameOverScreen;;
 let fondoX = 5000, fondoY = 5000; // Dimensiones del mapa
 const numTrees = 150; // Número total de árboles en el mapa
+const numRocks = 50;  // Número total de rocas
+const numGold = 50;
+const numIron = 50;
 let lives = 3; // Vidas del jugador
 let speed = 100;
 const ATTACK_RANGE = 100;
@@ -32,7 +35,7 @@ let posX, posY;
 let hostilesSpeed = 90;
 let animalSpeed = 150;
 const detectionRange = 300; // Rango de detección para lobos
-const numPassiveAnimals = 10; // Número de animales pasivos
+const numPassiveAnimals = 100; // Número de animales pasivos
 const numHostileAnimals = 100;  // Número de animales hostiles
 
 let inventory = []; // Inventario donde se guardan los objetos recogidos
@@ -48,21 +51,39 @@ function preload() {
     this.load.image('arbol', './img/arbol.png'); // Árboles del mapa
     this.load.image('tocon', './img/arbol_tronco.png'); // Tronco cuando un árbol es talado
     this.load.image('item1', './img/madera.png'); // Objeto de inventario (item1)
+    this.load.image('rock', './img/piedra.png'); // Imagen de roca
+    this.load.image('gold', './img/oro.png');
+    this.load.image('iron', './img/hierro.png');
     this.load.image('inventory', './img/inventario.png');
     this.load.image('gameOver', './img/game_over.png');
 
     // Animales Pasivos
     this.load.spritesheet('gat', './img/gato.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('rabbit', './img/conejo.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('rabbit', './img/conejo.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('pig','./img/chancho.png',{ frameWidth: 32,frameHeight: 32});
     this.load.spritesheet('cow','./img/vaca.png',{ frameWidth: 32,frameHeight: 32});
-    this.load.spritesheet('chicken','./img/gallina.png',{ frameWidth: 16,frameHeight: 16});
+    this.load.spritesheet('chicken','./img/gallina.png',{ frameWidth: 32,frameHeight: 32});
     this.load.spritesheet('sheep','./img/oveja.png',{ frameWidth: 32,frameHeight: 32});
 
     // Animales Hostiles
     this.load.spritesheet('boar', './img/jabali.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('wolf', './img/lobo.png', { frameWidth: 64, frameHeight: 32});
     this.load.spritesheet('tiger', './img/tigre.png', { frameWidth: 55, frameHeight: 27});
+
+    // Añadir un fondo para la pantalla de carga
+    this.add.rectangle(window.innerWidth / 2, window.innerHeight / 2, 0x000000);
+
+    // Añadir un texto de carga
+    const loadingText = this.add.text(window.innerWidth / 2, window.innerHeight / 2, 'Cargando...', {
+        font: '32px Pixelify Sans',
+        fill: '#ffffff'
+    });
+    loadingText.setOrigin(0.5, 0.5); // Centrar el texto
+
+    // Mostrar progreso de carga
+    this.load.on('progress', (value) => {
+        loadingText.setText('Cargando... ' + Math.round(value * 100) + '%');
+    });
 
 }
 
@@ -575,6 +596,114 @@ function updateInventoryDisplay() {
     });
 }
 
+function createRocks(scene, rockPositions) {
+    const rocks = scene.physics.add.group();
+
+    rockPositions.forEach(position => {
+        const rock = rocks.create(position.x, position.y, 'rock').setInteractive().setScale(0.5);
+        rock.setImmovable(true);
+        rock.setOrigin(0.5, 1);
+        rock.clickCount = 0;
+        if(lives!=0){
+            rock.on('pointerdown', function () {
+                let distance = Phaser.Math.Distance.Between(player.x, player.y, rock.x, rock.y);
+                if (distance <= ATTACK_RANGE) {
+                    handleResourceClick(scene, rock);
+                }
+                });
+        }
+    });
+
+    return rocks;
+}
+
+function generateNonOverlappingPositions(minDistance, numObjects, areaWidth, areaHeight) {
+    const positions = [];
+
+    for (let i = 0; i < numObjects; i++) {
+        let validPosition = false;
+        let x, y;
+
+        while (!validPosition) {
+            x = Phaser.Math.Between(50, areaWidth - 50); // Evitar bordes
+            y = Phaser.Math.Between(50, areaHeight - 50);
+            validPosition = true;
+
+            for (let pos of positions) {
+                const distance = Phaser.Math.Distance.Between(x, y, pos.x, pos.y);
+                if (distance < minDistance) {
+                    validPosition = false;
+                    break;
+                }
+            }
+        }
+
+        positions.push({ x: x, y: y });
+    }
+
+    return Array.isArray(positions) ? positions : [];
+}
+
+function createResources(scene, goldPositions, ironPositions) {
+    // Crear grupos para rocas, oro y hierro
+    const gold = scene.physics.add.group();
+    const iron = scene.physics.add.group();
+
+    // Crear oro
+    goldPositions.forEach(position => {
+        const goldItem = gold.create(position.x, position.y, 'gold').setInteractive().setScale(0.5);
+        goldItem.setCollideWorldBounds(true);
+        goldItem.setImmovable(true);
+        goldItem.setOrigin(0.5, 1);
+        goldItem.clickCount = 0;
+        if(lives!=0){
+            goldItem.on('pointerdown', function () {
+                let distance = Phaser.Math.Distance.Between(player.x, player.y, goldItem.x, goldItem.y);
+                if (distance <= ATTACK_RANGE) {
+                    handleResourceClick(scene, goldItem);
+                }
+            });
+        }
+    });
+
+    // Crear hierro
+    ironPositions.forEach(position => {
+        const ironItem = iron.create(position.x, position.y, 'iron').setInteractive().setScale(0.5);
+        ironItem.setCollideWorldBounds(true);
+        ironItem.setImmovable(true);
+        ironItem.setOrigin(0.5, 1);
+        ironItem.clickCount = 0;
+        if(lives!=0){
+            ironItem.on('pointerdown', function () {
+                let distance = Phaser.Math.Distance.Between(player.x, player.y, ironItem.x, ironItem.y);
+                if (distance <= ATTACK_RANGE) {
+                    handleResourceClick(scene, ironItem);
+                }
+            });
+        }
+    });
+
+    return { gold, iron };
+}
+
+function handleResourceClick(scene, resource){
+    resource.clickCount++;
+    const shakeTween = scene.tweens.add({
+        targets: resource,
+        angle: { from: -10, to: 10 }, // Oscila entre -10 y 10 grados
+        duration: 100, // Duración de la sacudida
+        yoyo: true, // Repetir hacia atrás después de terminar
+        repeat: 3, // Número de veces que repite la animación
+        onComplete: () => {
+            resource.setAngle(0); // Restablecer el ángulo al terminar
+            if (resource.clickCount >= 3) { // Si se ha clicado 3 veces
+                shakeTween.stop(); // Detener animación de sacudida
+                resource.destroy();
+            }
+        }
+    });
+}
+
 // Función principal de creación del juego
 function create() {
     background = this.add.tileSprite(fondoX / 2, fondoY / 2, fondoX, fondoY, 'grass'); // Crear fondo
@@ -589,7 +718,28 @@ function create() {
     const treePositions = generateNonOverlappingTreePositions(100); // Separación mínima de 100px
     this.trees = createTrees(this, treePositions);
     this.physics.add.collider(player, this.trees); // Colisión entre jugador y árboles
-    
+
+    // Crear rocas
+    const rockPositions = generateNonOverlappingPositions(100, numRocks, fondoX, fondoY);
+    this.rocks = createRocks(this, rockPositions);
+    this.physics.add.collider(player, this.rocks); // Colisión entre jugador y rocas
+
+    // Crear oro y hierro
+    const goldPositions = generateNonOverlappingPositions(100, numGold, fondoX, fondoY);
+    const ironPositions = generateNonOverlappingPositions(100, numIron, fondoX, fondoY);
+
+    if (Array.isArray(goldPositions) && Array.isArray(ironPositions)) {
+        const { gold, iron } = createResources(this, goldPositions, ironPositions);
+        this.gold = gold;
+        this.iron = iron;
+
+        // Colisiones con oro y hierro
+        this.physics.add.collider(player, this.gold);
+        this.physics.add.collider(player, this.iron);
+    } else {
+        console.error('Error al generar posiciones de oro o hierro:', goldPositions, ironPositions);
+    }
+
     createHearts(this);
 
     // Controles de movimiento (teclado)
