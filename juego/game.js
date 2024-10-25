@@ -8,7 +8,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 0 },
-            debug: false, // Cambia a 'false' en producción
+            debug: true,
         }
     },
     scene: {
@@ -21,17 +21,18 @@ const config = {
 const game = new Phaser.Game(config);
 
 // Variables globales
-let player, cursors, wasdKeys, background, heartsGroup;
+let player, cursors, wasdKeys, background, heartsGroup ,gameOverScreen;;
 let fondoX = 5000, fondoY = 5000; // Dimensiones del mapa
 const numTrees = 150; // Número total de árboles en el mapa
 let lives = 3; // Vidas del jugador
 let speed = 100;
-
+const ATTACK_RANGE = 100;
+let posX, posY;
 // Animales
 let hostilesSpeed = 90;
 let animalSpeed = 150;
 const detectionRange = 300; // Rango de detección para lobos
-const numPassiveAnimals = 100; // Número de animales pasivos
+const numPassiveAnimals = 10; // Número de animales pasivos
 const numHostileAnimals = 100;  // Número de animales hostiles
 
 let inventory = []; // Inventario donde se guardan los objetos recogidos
@@ -48,12 +49,18 @@ function preload() {
     this.load.image('tocon', './img/arbol_tronco.png'); // Tronco cuando un árbol es talado
     this.load.image('item1', './img/madera.png'); // Objeto de inventario (item1)
     this.load.image('inventory', './img/inventario.png');
+    this.load.image('gameOver', './img/game_over.png');
+
     // Animales Pasivos
-    this.load.spritesheet('deer', './img/ciervo.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('gat', './img/gato.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('rabbit', './img/conejo.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('pig','./img/chancho.png',{ frameWidth: 32,frameHeight: 32});
+    this.load.spritesheet('cow','./img/vaca.png',{ frameWidth: 32,frameHeight: 32});
+    this.load.spritesheet('chicken','./img/gallina.png',{ frameWidth: 16,frameHeight: 16});
+    this.load.spritesheet('sheep','./img/oveja.png',{ frameWidth: 32,frameHeight: 32});
 
     // Animales Hostiles
-    this.load.spritesheet('boar', './img/jabali.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('boar', './img/jabali.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('wolf', './img/lobo.png', { frameWidth: 64, frameHeight: 32});
     this.load.spritesheet('tiger', './img/tigre.png', { frameWidth: 55, frameHeight: 27});
 
@@ -89,9 +96,14 @@ function createTrees(scene, treePositions) {
         tree.clickCount = 0; // Contador de clics para talar el árbol
 
         // Evento al hacer clic en el árbol
-        tree.on('pointerdown', function () {
-            handleTreeClick(scene, tree);
-        });
+        if(lives!=0){
+            tree.on('pointerdown', function () {
+                let distance = Phaser.Math.Distance.Between(player.x, player.y, tree.x, tree.y);
+                if (distance <= ATTACK_RANGE) {
+                    handleTreeClick(scene, tree);
+                }
+            });
+        }
     });
 
     return trees; // Devolver el grupo de árboles creados
@@ -183,26 +195,65 @@ function generatePassiveAnimals(scene, numAnimals) {
         } while (isWithinCameraView(x, y, scene.cameras.main));
 
         // Seleccionar aleatoriamente qué tipo de animal generar
-        const animalType = Phaser.Math.Between(0, 1); // 0 para conejo, 1 para ciervo
+        const animalType = Phaser.Math.Between(0, 5);
         
         let animal;
         if (animalType === 0) {
-            // Crear un conejo
             animal = animals.create(x, y, 'rabbit').setInteractive();
             animal.animalType = 'rabbit'; // Asignar tipo de animal
             scene.anims.create({
                 key: 'rabbit_walk',
-                frames: scene.anims.generateFrameNumbers('rabbit', { start: 0, end: 1 }),
+                frames: scene.anims.generateFrameNumbers('rabbit', { start: 0, end: 3 }),
                 frameRate: 9,
                 repeat: -1
             });
-        } else {
-            // Crear un ciervo
-            animal = animals.create(x, y, 'deer').setInteractive().setScale(0.8);
-            animal.animalType = 'deer'; // Asignar tipo de animal
+        }
+        else if (animalType === 1) {
+            animal = animals.create(x, y, 'gat').setInteractive().setScale(0.8);
+            animal.animalType = 'gat'; // Asignar tipo de animal
             scene.anims.create({
-                key: 'deer_walk',
-                frames: scene.anims.generateFrameNumbers('deer', { start: 1, end: 5 }),
+                key: 'gat_walk',
+                frames: scene.anims.generateFrameNumbers('gat', { start: 0, end: 3 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        else if (animalType === 2) {
+            animal = animals.create(x, y, 'pig').setInteractive();
+            animal.animalType = 'pig'; // Asignar tipo de animal
+            scene.anims.create({
+                key: 'pig_walk',
+                frames: scene.anims.generateFrameNumbers('pig', { start: 0, end: 3 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        else if (animalType === 3) {
+            animal = animals.create(x, y, 'chicken').setInteractive();
+            animal.animalType = 'chicken'; // Asignar tipo de animal
+            scene.anims.create({
+                key: 'chicken_walk',
+                frames: scene.anims.generateFrameNumbers('chicken', { start: 0, end: 3 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        else if (animalType === 4) {
+            animal = animals.create(x, y, 'cow').setInteractive().setScale(0.8);
+            animal.animalType = 'cow'; // Asignar tipo de animal
+            scene.anims.create({
+                key: 'cow_walk',
+                frames: scene.anims.generateFrameNumbers('cow', { start: 0, end: 3 }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        else if (animalType === 5) {
+            animal = animals.create(x, y, 'sheep').setInteractive().setScale(0.8);
+            animal.animalType = 'sheep'; // Asignar tipo de animal
+            scene.anims.create({
+                key: 'sheep_walk',
+                frames: scene.anims.generateFrameNumbers('sheep', { start: 0, end: 3 }),
                 frameRate: 8,
                 repeat: -1
             });
@@ -218,9 +269,15 @@ function generatePassiveAnimals(scene, numAnimals) {
         });
         
         // Escucha cuando se clickea al animal para hacerle daño
-        animal.on('pointerdown', () => {
-            dealDamageToAnimal(animal, scene, animalEvent);
-        });
+        if(lives!=0){
+            animal.on('pointerdown', () => {
+            let distance = Phaser.Math.Distance.Between(posX, posY, animal.x, animal.y);
+            if (distance <= ATTACK_RANGE) {
+                dealDamageToAnimal(animal, scene);
+            }
+        });    
+        }
+
     }
 
     return animals;
@@ -235,59 +292,74 @@ function isWithinCameraView(x, y, camera) {
 }
 
 function moveAnimalRandomly(scene, animal) {
-    const directions = ['left', 'right', 'up', 'down'];
-    const direction = Phaser.Utils.Array.GetRandom(directions);
-
-    let velocityX = 0;
-    let velocityY = 0;
-
-    // Usamos if para establecer la velocidad en X según la dirección
-    if (direction === 'left') {
-        velocityX = -animalSpeed; // Mover a la izquierda
-        if (animal.animalType === 'rabbit') {
-            animal.anims.play('rabbit_walk');
-        } else if (animal.animalType === 'deer') {
-            animal.anims.play('deer_walk');
+    if(animal.health != 0 && animal.health > 0){
+        if (!animal) {
+            console.error('El objeto animal no está definido.');
+            return;
         }
-        animal.flipX = false;
-    } else if (direction === 'right') {
-        velocityX = animalSpeed; // Mover a la derecha
-        if (animal.animalType === 'rabbit') {
-            animal.anims.play('rabbit_walk');
-        } else if (animal.animalType === 'deer') {
-            animal.anims.play('deer_walk');
+    
+        const directions = ['left', 'right', 'up', 'down'];
+        const direction = Phaser.Utils.Array.GetRandom(directions);
+    
+        let velocityX = 0;
+        let velocityY = 0;
+    
+        const animalStats = {
+            rabbit: { anim: 'rabbit_walk', speedModifier: 0 },
+            gat: { anim: 'gat_walk', speedModifier: 0 },
+            pig: { anim: 'pig_walk', speedModifier: 50 },
+            chicken: { anim: 'chicken_walk', speedModifier: 0 },
+            cow: { anim: 'cow_walk', speedModifier: 50 },
+            sheep: { anim: 'sheep_walk', speedModifier: 25 }
+        };
+    
+        const animalType = animal.animalType;
+        const animalInfo = animalStats[animalType] || { anim: 'default_anim', speedModifier: 0 };
+    
+        // Verificación de existencia de la propiedad anims
+        if (!animal.anims) {
+            console.error('La propiedad anims no está definida para el animal:', animal);
+            return;
         }
-        animal.flipX = true;
-    } else {
-        velocityX = 0; // No moverse en el eje X
+    
+        switch (direction) {
+            case 'left':
+                velocityX = -animalSpeed + animalInfo.speedModifier;
+                animal.flipX = true;
+                break;
+            case 'right':
+                velocityX = animalSpeed - animalInfo.speedModifier;
+                animal.flipX = false;
+                break;
+            case 'up':
+                velocityY = -animalSpeed + animalInfo.speedModifier;
+                break;
+            case 'down':
+                velocityY = animalSpeed - animalInfo.speedModifier;
+                break;
+            default:
+                break;
+        }
+    
+        // Reproducir la animación correspondiente
+        if (animalInfo.anim) {
+            animal.anims.play(animalInfo.anim);
+        } else {
+            console.error('Animación no válida para el animal:', animalInfo);
+        }
+    
+        // Aplicar las velocidades calculadas al animal
+        animal.setVelocity(velocityX, velocityY);
     }
-
-    // Usamos if para establecer la velocidad en Y según la dirección
-    if (direction === 'up') {
-        velocityY = -animalSpeed; // Mover hacia arriba
-        if (animal.animalType === 'rabbit') {
-            animal.anims.play('rabbit_walk');
-        } else if (animal.animalType === 'deer') {
-            animal.anims.play('deer_walk');
-        }
-    } else if (direction === 'down') {
-        velocityY = animalSpeed; // Mover hacia abajo
-        if (animal.animalType === 'rabbit') {
-            animal.anims.play('rabbit_walk');
-        } else if (animal.animalType === 'deer') {
-            animal.anims.play('deer_walk');
-        }
-    } else {
-        velocityY = 0; // No moverse en el eje Y
-    }
-
-    // Aplicar las velocidades calculadas al animal
-    animal.setVelocity(velocityX, velocityY);
 }
 
 
-
 function moveHostileAnimalTowardsPlayer(scene, animal, speed, animationKey) {
+    // Verificar si el animal existe
+    if (!animal || !animal.body) {
+        return;
+    }
+
     const distance = Phaser.Math.Distance.Between(animal.x, animal.y, player.x, player.y);
 
     if (distance < detectionRange) {
@@ -306,6 +378,7 @@ function moveHostileAnimalTowardsPlayer(scene, animal, speed, animationKey) {
         animal.setVelocity(0);
     }
 }
+
 
 function createHostileAnimal(scene, x, y, type) {
 
@@ -332,7 +405,7 @@ function createHostileAnimal(scene, x, y, type) {
         health = 5;
         scene.anims.create({
             key: animationKey,
-            frames: scene.anims.generateFrameNumbers('boar', { start: 0, end: 6 }),
+            frames: scene.anims.generateFrameNumbers('boar', { start: 0, end: 3 }),
             frameRate: 6,
             repeat: -1
         });
@@ -352,16 +425,23 @@ function createHostileAnimal(scene, x, y, type) {
     animal.health = health;
 
     // Configurar el comportamiento de movimiento hacia el jugador
-    let animalEvent = scene.time.addEvent({
-        delay: 100,
-        callback: () => moveHostileAnimalTowardsPlayer(scene, animal, speed, animationKey),
-        loop: true
-    });
-
+    if(lives!=0){
+        let animalEvent = scene.time.addEvent({
+            delay: 100,
+            callback: () => moveHostileAnimalTowardsPlayer(scene, animal, speed, animationKey),
+            loop: true
+        });
+    }
     // Escucha cuando se clickea al animal para hacerle daño
-    animal.on('pointerdown', () => {
-        dealDamageToAnimal(animal, scene, animalEvent);
-    });
+    if(lives!=0){
+        animal.on('pointerdown', () => {
+            let distance = Phaser.Math.Distance.Between(posX, posY, animal.x, animal.y);
+            if (distance <= ATTACK_RANGE) {
+                dealDamageToAnimal(animal, scene);
+            }
+        });
+    }
+    
 
     return animal;
 }
@@ -400,19 +480,38 @@ function handleHostileAnimal(scene, animal) {
             player.clearTint();  // Volver al color original
         });
     }
+    if (lives === 0) {
+        player.setTint(0xff0000);  // Cambiar a rojo el jugador
+        gameOverScreen.setVisible(true);  // Mostrar pantalla de Game Over
+        speed = 0;
+        player.anims.stop(); // Detener la animación del jugador
+        scene.input.keyboard.enabled = false; // Desactivar el control del jugador
+        scene.time.delayedCall(2000, () => {
+            window.location.href = window.location.href;
+        });
+    }
 }
 
 function dealDamageToAnimal(animal, scene, animalEvent) {
-    if(animal.health!=0){
+    if (!animal) {
+        console.error('El objeto animal no está definido.');
+        return;
+    }
+
+    if (animal.health != null && animal.health > 0) {
         animal.health -= 1; // Reducir la salud del animal
-        animal.setVelocity(0)
+
         // Cambiar el color a rojo
         animal.setTint(0xff0000);
+        
         // Después de un pequeño tiempo, restaurar el color
         scene.time.delayedCall(500, () => {
-            animal.clearTint();
-        }); 
+            if (animal) { // Verificar que el animal siga existiendo
+                animal.clearTint();
+            }
+        });
     }
+
     // Si la salud del animal es 0, destruirlo
     if (animal.health === 0) {
         // Desactivar cualquier colisión y movimiento
@@ -426,11 +525,14 @@ function dealDamageToAnimal(animal, scene, animalEvent) {
 
         // Usar un retraso para asegurarte de que no está en uso en otro evento
         scene.time.delayedCall(50, () => {
-            animalEvent.remove();
-            animal.destroy();
+            if (animalEvent) { // Verifica que animalEvent esté definido
+                animalEvent.remove();
+            }
+            if (animal) { // Verificar que el animal siga existiendo
+                animal.destroy();
+            }
         });
     }
-
 }
 
 
@@ -527,13 +629,19 @@ function create() {
     this.cameras.main.setZoom(2); // Zoom de la cámara
     this.cameras.main.setBounds(0, 0, fondoX, fondoY); // Límites de la cámara
     this.physics.world.setBounds(0, 0, fondoX, fondoY); // Límites del mundo del juego
+
+    gameOverScreen = this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'gameOver').setScale(0.5);
+    gameOverScreen.setOrigin(0.5);
+    gameOverScreen.setVisible(false); // Ocultar inicialmente
+    gameOverScreen.setScrollFactor(0); // Para que no se mueva con la cámara
 }
 
 
 // Función de actualización del juego (se ejecuta en cada frame)
 function update() {
     player.setVelocity(0); // Detener al jugador por defecto
-
+    posX = player.x;
+    posY = player.y;
     // Control de movimiento con flechas o teclas WASD
     if (cursors.left.isDown || wasdKeys.left.isDown) {
         player.setVelocityX(-speed); // Mover a la izquierda
