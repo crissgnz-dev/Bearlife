@@ -1,5 +1,5 @@
-import { fondoX, fondoY } from './constants.js';
-import { isLand } from './map.js';
+import { fondoX, fondoY } from "./constants.js";
+import { isLand } from "./map.js";
 
 export function createPlayer(scene) {
   let validPos = false;
@@ -13,7 +13,9 @@ export function createPlayer(scene) {
     }
   }
 
-  const player = scene.physics.add.sprite(spawnX, spawnY, "player").setScale(0.8);
+  const player = scene.physics.add
+    .sprite(spawnX, spawnY, "player")
+    .setScale(0.8);
   player.setCollideWorldBounds(true);
 
   scene.anims.create({

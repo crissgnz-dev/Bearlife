@@ -1,9 +1,16 @@
-import { TILE_SIZE, MAP_COLS, MAP_ROWS, fondoX, fondoY, TERRAIN } from './constants.js';
+import {
+  TILE_SIZE,
+  MAP_COLS,
+  MAP_ROWS,
+  fondoX,
+  fondoY,
+  TERRAIN,
+} from "./constants.js";
 
 let mapGrid = [];
 
 export function getMapGrid() {
-    return mapGrid;
+  return mapGrid;
 }
 
 export function generateIslandMap() {
@@ -12,7 +19,6 @@ export function generateIslandMap() {
   const centerY = Math.floor(MAP_ROWS / 2);
   const maxRadius = Math.min(MAP_COLS, MAP_ROWS) / 2;
 
-  // 1. Inicialización Radial
   for (let y = 0; y < MAP_ROWS; y++) {
     const row = [];
     for (let x = 0; x < MAP_COLS; x++) {
@@ -30,14 +36,14 @@ export function generateIslandMap() {
     newMap.push(row);
   }
 
-  // 2. Cellular Automata
   const iterations = 5;
   for (let i = 0; i < iterations; i++) {
     smoothMap(newMap);
   }
 
-  // 3. Flood Fill
-  const visited = new Array(MAP_ROWS).fill(0).map(() => new Array(MAP_COLS).fill(false));
+  const visited = new Array(MAP_ROWS)
+    .fill(0)
+    .map(() => new Array(MAP_COLS).fill(false));
   const queue = [{ x: centerX, y: centerY }];
 
   if (newMap[centerY][centerX] === TERRAIN.WATER) {
@@ -48,8 +54,10 @@ export function generateIslandMap() {
   while (queue.length > 0) {
     const { x, y } = queue.shift();
     const dirs = [
-      { dx: 0, dy: 1 }, { dx: 0, dy: -1 },
-      { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: 0, dy: -1 },
+      { dx: 1, dy: 0 },
+      { dx: -1, dy: 0 },
     ];
 
     for (let d of dirs) {
@@ -73,7 +81,6 @@ export function generateIslandMap() {
     }
   }
 
-  // 4. Generar Playas
   const mapWithSand = JSON.parse(JSON.stringify(newMap));
   for (let y = 0; y < MAP_ROWS; y++) {
     for (let x = 0; x < MAP_COLS; x++) {
@@ -82,7 +89,12 @@ export function generateIslandMap() {
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
             if (dx === 0 && dy === 0) continue;
-            if (y + dy >= 0 && y + dy < MAP_ROWS && x + dx >= 0 && x + dx < MAP_COLS) {
+            if (
+              y + dy >= 0 &&
+              y + dy < MAP_ROWS &&
+              x + dx >= 0 &&
+              x + dx < MAP_COLS
+            ) {
               if (newMap[y + dy][x + dx] === TERRAIN.WATER) {
                 isCoast = true;
               }
@@ -104,7 +116,8 @@ function smoothMap(map) {
   const tempMap = JSON.parse(JSON.stringify(map));
   for (let y = 0; y < MAP_ROWS; y++) {
     for (let x = 0; x < MAP_COLS; x++) {
-      if (x === 0 || x === MAP_COLS - 1 || y === 0 || y === MAP_ROWS - 1) continue;
+      if (x === 0 || x === MAP_COLS - 1 || y === 0 || y === MAP_ROWS - 1)
+        continue;
       const neighborBoxSize = 1;
       let landNeighbors = 0;
       for (let dy = -neighborBoxSize; dy <= neighborBoxSize; dy++) {
@@ -129,11 +142,21 @@ export function drawMap(scene) {
   for (let y = 0; y < MAP_ROWS; y++) {
     for (let x = 0; x < MAP_COLS; x++) {
       if (mapGrid[y][x] === TERRAIN.LAND) {
-        scene.add.image(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, "grass")
-             .setDisplaySize(TILE_SIZE, TILE_SIZE);
+        scene.add
+          .image(
+            x * TILE_SIZE + TILE_SIZE / 2,
+            y * TILE_SIZE + TILE_SIZE / 2,
+            "grass"
+          )
+          .setDisplaySize(TILE_SIZE, TILE_SIZE);
       } else if (mapGrid[y][x] === TERRAIN.SAND) {
-        scene.add.image(x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2, "sand")
-             .setDisplaySize(TILE_SIZE, TILE_SIZE);
+        scene.add
+          .image(
+            x * TILE_SIZE + TILE_SIZE / 2,
+            y * TILE_SIZE + TILE_SIZE / 2,
+            "sand"
+          )
+          .setDisplaySize(TILE_SIZE, TILE_SIZE);
       }
     }
   }
@@ -143,7 +166,10 @@ export function isLand(x, y) {
   const gridX = Math.floor(x / TILE_SIZE);
   const gridY = Math.floor(y / TILE_SIZE);
   if (gridX >= 0 && gridX < MAP_COLS && gridY >= 0 && gridY < MAP_ROWS) {
-    return mapGrid[gridY][gridX] === TERRAIN.LAND || mapGrid[gridY][gridX] === TERRAIN.SAND;
+    return (
+      mapGrid[gridY][gridX] === TERRAIN.LAND ||
+      mapGrid[gridY][gridX] === TERRAIN.SAND
+    );
   }
   return false;
 }

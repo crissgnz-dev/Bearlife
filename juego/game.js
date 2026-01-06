@@ -1,14 +1,20 @@
-import { fondoX, fondoY } from './utils/constants.js';
-import { generateIslandMap, drawMap, isLand } from './utils/map.js';
-import { createPlayer } from './utils/player.js';
-import { createTrees, generateNonOverlappingTreePositions, generatePassiveAnimals, generateHostileAnimals } from './utils/entities.js';
-import { createHearts, updateHeartsPosition } from './utils/ui.js';
-import { 
-    createInventorySlots, 
-    toggleInventoryVisibility, 
-    updateInventoryPositions, 
-    setInventoryBackground 
-} from './utils/inventory.js';
+import { fondoX, fondoY } from "./utils/constants.js";
+import { generateIslandMap, drawMap, isLand } from "./utils/map.js";
+import { createPlayer } from "./utils/player.js";
+import {
+  createTrees,
+  generateNonOverlappingTreePositions,
+  generatePassiveAnimals,
+  generateHostileAnimals,
+  updateAnimals,
+} from "./utils/entities.js";
+import { createHearts, updateHeartsPosition } from "./utils/ui.js";
+import {
+  createInventorySlots,
+  toggleInventoryVisibility,
+  updateInventoryPositions,
+  setInventoryBackground,
+} from "./utils/inventory.js";
 
 console.log("GAME JS LOADED - MODULARIZED");
 
@@ -37,9 +43,8 @@ const game = new Phaser.Game(config);
 let player, cursors, wasdKeys;
 let inventoryVisible = false;
 
-// Variables passed to modules or managed locally?
-const numPassiveAnimals = 60;
-const numHostileAnimals = 50;
+const numPassiveAnimals = 30;
+const numHostileAnimals = 25;
 const lives = 3;
 
 function preload() {
@@ -52,46 +57,69 @@ function preload() {
   this.load.image("sand", "./img/sand3.png");
   this.load.image("water", "./img/water4.png");
   this.load.image("arbol", "./img/arbol3.png");
-  this.load.image("tocon", "./img/arbol_tronco.png");
+  this.load.image("tocon", "./img/arbol_tronco2.png");
   this.load.spritesheet("rabbit", "./img/conejo.png", {
     frameWidth: 16,
     frameHeight: 16,
   });
+  this.load.spritesheet("gat", "./img/gato.png", {
+    frameWidth: 32,
+    frameHeight: 32,
+  });
+  this.load.spritesheet("pig", "./img/chancho.png", {
+    frameWidth: 32,
+    frameHeight: 32,
+  });
+  this.load.spritesheet("cow", "./img/vaca.png", {
+    frameWidth: 32,
+    frameHeight: 32,
+  });
+  this.load.spritesheet("chicken", "./img/gallina.png", {
+    frameWidth: 16,
+    frameHeight: 16,
+  });
+  this.load.spritesheet("sheep", "./img/oveja.png", {
+    frameWidth: 32,
+    frameHeight: 32,
+  });
+
   this.load.spritesheet("wolf", "./img/lobo.png", {
     frameWidth: 64,
     frameHeight: 32,
   });
+  this.load.spritesheet("boar", "./img/jabali.png", {
+    frameWidth: 32,
+    frameHeight: 32,
+  });
+  this.load.spritesheet("tiger", "./img/tigre.png", {
+    frameWidth: 55,
+    frameHeight: 27,
+  });
+
   this.load.image("item1", "./img/madera.png");
   this.load.image("inventory", "./img/inventario 2.png");
 }
 
 function create() {
-  // Map
   generateIslandMap();
   drawMap(this);
 
-  // Player
   player = createPlayer(this);
 
-  // Entities
   this.animals = generatePassiveAnimals(this, numPassiveAnimals);
   generateHostileAnimals(this, numHostileAnimals, player);
 
-  // Trees
   const treePositions = generateNonOverlappingTreePositions(200);
   this.trees = createTrees(this, treePositions);
   this.physics.add.collider(player, this.trees);
 
-  // UI
   createHearts(this, lives);
 
-  // Inventory
   const inventoryBackground = this.add.image(player.x, player.y, "inventory");
   inventoryBackground.setVisible(false);
   setInventoryBackground(inventoryBackground);
   createInventorySlots(this);
 
-  // Input
   cursors = this.input.keyboard.createCursorKeys();
   wasdKeys = this.input.keyboard.addKeys({
     up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -105,7 +133,6 @@ function create() {
     toggleInventoryVisibility(inventoryVisible);
   });
 
-  // Camera
   this.cameras.main.startFollow(player);
   this.cameras.main.setZoom(2.5);
   this.cameras.main.setBounds(0, 0, fondoX, fondoY);
@@ -133,7 +160,6 @@ function update() {
     newVelY = speed;
   }
 
-  // Pre-calculate next position checks (simple sliding against walls)
   if (isLand(player.x + newVelX * 0.1, player.y)) {
     player.setVelocityX(newVelX);
   }
@@ -147,9 +173,10 @@ function update() {
     player.anims.play("bear_walk", false);
   }
 
-  // UI Updates
   updateHeartsPosition(player);
   if (inventoryVisible) {
-      updateInventoryPositions(player.x, player.y);
+    updateInventoryPositions(player.x, player.y);
   }
+
+  updateAnimals(this);
 }

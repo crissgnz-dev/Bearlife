@@ -2,15 +2,15 @@ let heartsGroup;
 export let lives = 3;
 
 export function getLives() {
-    return lives;
+  return lives;
 }
 
 export function setLives(n) {
-    lives = n;
+  lives = n;
 }
 
 export function getHeartsGroup() {
-    return heartsGroup;
+  return heartsGroup;
 }
 
 export function createHearts(scene, maxLives) {
@@ -24,24 +24,24 @@ export function createHearts(scene, maxLives) {
 
 export function updateHeartsPosition(player) {
   const totalWidth = (lives - 1) * 5.9;
-  if(heartsGroup) {
-      heartsGroup.children.iterate((heart, index) => {
-        if(heart) {
-            heart.x = player.x - totalWidth / 2 + index * 7;
-            heart.y = player.y - 17;
-        }
-      });
+  if (heartsGroup) {
+    heartsGroup.children.iterate((heart, index) => {
+      if (heart) {
+        heart.x = player.x - totalWidth / 2 + index * 7;
+        heart.y = player.y - 17;
+      }
+    });
   }
 }
 
 export function loseLife() {
-    if (lives > 0) {
-        lives -= 1;
-        const hearts = heartsGroup.getChildren();
-        if(hearts.length > 0) {
-            hearts[hearts.length - 1].destroy();
-        }
-        return true;
+  if (lives > 0) {
+    lives -= 1;
+    const hearts = heartsGroup.getChildren();
+    if (hearts.length > 0) {
+      hearts[hearts.length - 1].destroy();
     }
-    return false;
+    return true;
+  }
+  return false;
 }
