@@ -4,7 +4,6 @@ import { addItemToInventory } from "./inventory.js";
 import { loseLife, getLives } from "./ui.js";
 
 const numTrees = 150;
-const detectionRange = 250;
 const hostilesSpeed = 100;
 const animalSpeed = 150;
 
@@ -18,9 +17,10 @@ export function createTrees(scene, treePositions) {
         .setInteractive();
       tree.setScale(1.5);
       tree.setImmovable(true);
-      tree.setOrigin(0.5, 1);
+      tree.setOrigin(0.5, 0.75);
       tree.body.setSize(tree.width * 0.5, tree.height * 0.2);
       tree.body.setOffset(tree.width * 0.25, tree.height * 0.8);
+      tree.setDepth(tree.y);
       tree.clickCount = 0;
 
       tree.on("pointerdown", () => handleTreeClick(scene, tree));
@@ -31,6 +31,8 @@ export function createTrees(scene, treePositions) {
 }
 
 function handleTreeClick(scene, tree) {
+  if (tree.texture.key === "tocon") return;
+
   tree.clickCount++;
 
   const shakeTween = scene.tweens.add({
@@ -41,10 +43,16 @@ function handleTreeClick(scene, tree) {
     repeat: 3,
     onComplete: () => {
       tree.setAngle(0);
-      if (tree.clickCount >= 3) {
+      // Check again inside callback to prevent race conditions from rapid clicks
+      if (tree.clickCount >= 3 && tree.texture.key !== "tocon") {
         shakeTween.stop();
         tree.setTexture("tocon");
         tree.disableInteractive();
+
+        const explosion = scene.add.sprite(tree.x, tree.y, "explosion");
+        explosion.setDepth(99999);
+        explosion.play("explode");
+        explosion.on("animationcomplete", () => explosion.destroy());
 
         addItemToInventory(scene, "item1");
 
@@ -164,6 +172,55 @@ export function generatePassiveAnimals(scene, numAnimals) {
         });
       }
 
+      // Hit Area (Larger than sprite)
+      const hitAreaSize = 40;
+      animal.setInteractive(
+        new Phaser.Geom.Rectangle(
+          -10,
+          -10,
+          animal.width + 20,
+          animal.height + 20
+        ),
+        Phaser.Geom.Rectangle.Contains
+      );
+
+      animal.health = 3;
+      animal.isStunned = false;
+
+      animal.on("pointerdown", (pointer) => {
+        animal.health--;
+        animal.setTint(0xff0000);
+
+        // Update health display
+        updateAnimalHealthDisplay(scene, animal);
+
+        // Stun only (No Knockback)
+        animal.isStunned = true;
+        animal.setVelocity(0, 0);
+
+        scene.time.delayedCall(200, () => {
+          if (animal && animal.scene) animal.clearTint();
+        });
+
+        scene.time.delayedCall(500, () => {
+          if (animal && animal.scene) {
+            animal.isStunned = false;
+          }
+        });
+
+        if (animal.health <= 0) {
+          if (animal.healthHearts)
+            animal.healthHearts.forEach((h) => h.destroy());
+
+          const explosion = scene.add.sprite(animal.x, animal.y, "explosion");
+          explosion.setDepth(99999);
+          explosion.play("explode");
+          explosion.on("animationcomplete", () => explosion.destroy());
+
+          animal.destroy();
+        }
+      });
+
       moveAnimalRandomly(scene, animal);
     }
   }
@@ -172,6 +229,12 @@ export function generatePassiveAnimals(scene, numAnimals) {
 
 function moveAnimalRandomly(scene, animal) {
   if (!animal || !animal.scene) return;
+
+  // Stun check
+  if (animal.isStunned) {
+    scene.time.delayedCall(100, () => moveAnimalRandomly(scene, animal));
+    return;
+  }
 
   const directions = ["left", "right", "up", "down"];
   const direction = Phaser.Utils.Array.GetRandom(directions);
@@ -309,6 +372,51 @@ export function generateHostileAnimals(scene, numAnimals, player) {
         scene
       );
 
+      // Hit Area (Larger than sprite)
+      animal.setInteractive(
+        new Phaser.Geom.Rectangle(
+          -10,
+          -10,
+          animal.width + 20,
+          animal.height + 20
+        ),
+        Phaser.Geom.Rectangle.Contains
+      );
+
+      animal.on("pointerdown", (pointer) => {
+        animal.health--;
+        animal.setTint(0xff0000);
+
+        // Update health display
+        updateAnimalHealthDisplay(scene, animal);
+
+        // Stun only (No Knockback)
+        animal.isStunned = true;
+        animal.setVelocity(0, 0);
+
+        scene.time.delayedCall(200, () => {
+          if (animal && animal.scene) animal.clearTint();
+        });
+
+        scene.time.delayedCall(500, () => {
+          if (animal && animal.scene) {
+            animal.isStunned = false;
+          }
+        });
+
+        if (animal.health <= 0) {
+          if (animal.healthHearts)
+            animal.healthHearts.forEach((h) => h.destroy());
+
+          const explosion = scene.add.sprite(animal.x, animal.y, "explosion");
+          explosion.setDepth(99999);
+          explosion.play("explode");
+          explosion.on("animationcomplete", () => explosion.destroy());
+
+          animal.destroy();
+        }
+      });
+
       scene.time.addEvent({
         delay: 100,
         callback: () =>
@@ -322,6 +430,9 @@ export function generateHostileAnimals(scene, numAnimals, player) {
 
 function moveWolfTowardsPlayer(scene, wolf, player, speed, animKey) {
   if (!wolf || !wolf.body) return;
+
+  if (wolf.isStunned) return;
+
   const distance = Phaser.Math.Distance.Between(
     wolf.x,
     wolf.y,
@@ -392,27 +503,81 @@ function handleHostileAnimal(scene, animal, player) {
 }
 
 export function updateAnimals(scene) {
-  if (scene.animals) {
-    scene.animals.getChildren().forEach((animal) => {
-      if (
-        animal.body &&
-        (animal.body.velocity.x !== 0 || animal.body.velocity.y !== 0)
-      ) {
-        const lookAhead = 20;
+  const allAnimals = [];
+  if (scene.animals) allAnimals.push(...scene.animals.getChildren());
+  if (scene.hostileAnimals)
+    allAnimals.push(...scene.hostileAnimals.getChildren());
 
-        const vx = animal.body.velocity.x;
-        const vy = animal.body.velocity.y;
-        const speed = Math.sqrt(vx * vx + vy * vy);
-
-        if (speed > 0) {
-          const nextX = animal.x + (vx / speed) * lookAhead;
-          const nextY = animal.y + (vy / speed) * lookAhead;
-
-          if (!isLand(nextX, nextY)) {
-            animal.setVelocity(0, 0);
+  allAnimals.forEach((animal) => {
+    // 1. Health Bar Update
+    if (animal.healthHearts && animal.healthHearts.length > 0) {
+      if (scene.time.now > animal.healthHeartTimer) {
+        // Expired
+        animal.healthHearts.forEach((h) => h.destroy());
+        animal.healthHearts = [];
+      } else {
+        // Move with animal
+        const spacing = 8;
+        const totalW = (animal.healthHearts.length - 1) * spacing;
+        const startX = animal.x - totalW / 2;
+        animal.healthHearts.forEach((heart, index) => {
+          if (heart) {
+            heart.x = startX + index * spacing;
+            heart.y = animal.y - 15; // Above head
+            heart.x = startX + index * spacing;
+            heart.y = animal.y - 15; // Above head
+            heart.depth = 99999; // Ensure on top (UI Layer)
           }
+        });
+      }
+    }
+
+    // Depth Sorting
+    animal.setDepth(animal.y);
+
+    // 2. Water Collision Check
+    if (
+      animal.body &&
+      (animal.body.velocity.x !== 0 || animal.body.velocity.y !== 0)
+    ) {
+      const lookAhead = 20;
+
+      const vx = animal.body.velocity.x;
+      const vy = animal.body.velocity.y;
+      const speed = Math.sqrt(vx * vx + vy * vy);
+
+      if (speed > 0) {
+        const nextX = animal.x + (vx / speed) * lookAhead;
+        const nextY = animal.y + (vy / speed) * lookAhead;
+
+        if (!isLand(nextX, nextY)) {
+          animal.setVelocity(0, 0);
         }
       }
-    });
+    }
+  });
+}
+
+function updateAnimalHealthDisplay(scene, animal) {
+  // Reset Timer (10 seconds)
+  animal.healthHeartTimer = scene.time.now + 10000;
+
+  // Clear existing to redraw correctly
+  if (animal.healthHearts) {
+    animal.healthHearts.forEach((h) => h.destroy());
+  }
+  animal.healthHearts = [];
+
+  // Draw Hearts
+  const spacing = 8;
+  const totalW = (animal.health - 1) * spacing;
+  const startX = animal.x - totalW / 2;
+
+  for (let i = 0; i < animal.health; i++) {
+    const heart = scene.add
+      .image(startX + i * spacing, animal.y - 15, "vida")
+      .setScale(0.3);
+    heart.depth = 99999;
+    animal.healthHearts.push(heart);
   }
 }

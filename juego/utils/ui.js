@@ -17,17 +17,17 @@ export function createHearts(scene, maxLives) {
   lives = maxLives;
   heartsGroup = scene.add.group();
   for (let i = 0; i < lives; i++) {
-    let heart = scene.add.image(0, 0, "vida").setScale(0.5);
+    let heart = scene.add.image(0, 0, "vida").setScale(0.45);
     heartsGroup.add(heart);
   }
 }
 
 export function updateHeartsPosition(player) {
-  const totalWidth = (lives - 1) * 5.9;
+  const totalWidth = (lives - 1) * 8;
   if (heartsGroup) {
     heartsGroup.children.iterate((heart, index) => {
       if (heart) {
-        heart.x = player.x - totalWidth / 2 + index * 7;
+        heart.x = player.x - totalWidth / 2 + index * 8;
         heart.y = player.y - 17;
       }
     });

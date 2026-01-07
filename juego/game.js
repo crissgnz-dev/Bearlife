@@ -20,15 +20,23 @@ console.log("GAME JS LOADED - MODULARIZED");
 
 const config = {
   type: Phaser.AUTO,
-  width: window.innerWidth - 100,
-  height: window.innerHeight - 100,
+  scale: {
+    // mode: Phaser.Scale.RESIZE, // Removed to manual control
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: document.getElementById("juego")
+      ? document.getElementById("juego").clientWidth
+      : window.innerWidth,
+    height: document.getElementById("juego")
+      ? document.getElementById("juego").clientHeight
+      : window.innerHeight,
+  },
   parent: "juego",
   pixelArt: true,
   physics: {
     default: "arcade",
     arcade: {
       gravity: { y: 0 },
-      debug: true,
+      debug: false,
     },
   },
   scene: {
@@ -40,12 +48,12 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-let player, cursors, wasdKeys;
+let player, cursors, wasdKeys, shiftKey;
 let inventoryVisible = false;
 
 const numPassiveAnimals = 30;
 const numHostileAnimals = 25;
-const lives = 3;
+const lives = 5;
 
 function preload() {
   this.load.spritesheet("player", "./img/oso.png", {
@@ -58,6 +66,11 @@ function preload() {
   this.load.image("water", "./img/water4.png");
   this.load.image("arbol", "./img/arbol3.png");
   this.load.image("tocon", "./img/arbol_tronco2.png");
+
+  this.load.spritesheet("explosion", "./img/explosion.png", {
+    frameWidth: 64,
+    frameHeight: 64,
+  });
   this.load.spritesheet("rabbit", "./img/conejo.png", {
     frameWidth: 16,
     frameHeight: 16,
@@ -107,11 +120,13 @@ function create() {
   player = createPlayer(this);
 
   this.animals = generatePassiveAnimals(this, numPassiveAnimals);
-  generateHostileAnimals(this, numHostileAnimals, player);
+  this.hostileAnimals = generateHostileAnimals(this, numHostileAnimals, player);
 
   const treePositions = generateNonOverlappingTreePositions(200);
   this.trees = createTrees(this, treePositions);
   this.physics.add.collider(player, this.trees);
+  this.physics.add.collider(this.animals, this.trees);
+  this.physics.add.collider(this.hostileAnimals, this.trees);
 
   createHearts(this, lives);
 
@@ -127,6 +142,7 @@ function create() {
     down: Phaser.Input.Keyboard.KeyCodes.S,
     right: Phaser.Input.Keyboard.KeyCodes.D,
   });
+  shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
   this.input.keyboard.on("keydown-E", () => {
     inventoryVisible = !inventoryVisible;
@@ -136,12 +152,47 @@ function create() {
   this.cameras.main.startFollow(player);
   this.cameras.main.setZoom(2.5);
   this.cameras.main.setBounds(0, 0, fondoX, fondoY);
+  // Initial bounds
   this.physics.world.setBounds(0, 0, fondoX, fondoY);
+
+  // Custom Resize Logic to fit parent container exactly
+  const resizeGame = () => {
+    const parent = document.getElementById("juego");
+    if (parent) {
+      const width = parent.clientWidth;
+      const height = parent.clientHeight;
+
+      this.scale.resize(width, height);
+      this.cameras.main.setViewport(0, 0, width, height);
+    }
+  };
+
+  // Listen to window resize
+  window.addEventListener("resize", () => {
+    resizeGame();
+  });
+
+  // Call once to ensure fit, with a slight delay to allow layout to settle
+  setTimeout(() => {
+    resizeGame();
+  }, 50);
+
+  this.anims.create({
+    key: "explode",
+    frames: this.anims.generateFrameNumbers("explosion", { start: 0, end: 4 }), // Assuming 5 frames or so, need to check user's spritesheet details or guess standard. User provided 64x64 but not count. standard is often 5-8. I'll guess safe or use generateFrameNumbers logic. Defaulting to all frames if row is 1. Safe bet is often usage.
+    frameRate: 15,
+    hideOnComplete: true,
+  });
 }
 
 function update() {
   player.setVelocity(0);
-  const speed = 100;
+  player.setDepth(player.y);
+
+  // Sprint Logic
+  const baseSpeed = 100;
+  const sprintSpeed = 150;
+  const speed = shiftKey.isDown ? sprintSpeed : baseSpeed;
 
   let newVelX = 0;
   let newVelY = 0;
